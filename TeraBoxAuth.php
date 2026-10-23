@@ -446,6 +446,66 @@ class TeraBoxAuth
         }
     }
 
+    /**
+     * Stream a dlink to a visitor (used by direct.php). Same safety rules as downloadUrlTo(): HTTPS only,
+     * public hosts only, cookie only sent to TeraBox hosts. $range is a raw "bytes=a-b" value or ''.
+     * $sendHeaders(int $status, array $headers) is called once, just before the first body byte;
+     * $sendBody(string $chunk): bool returns false to stop (visitor went away).
+     */
+    public function streamUrl(string $url, string $range, bool $headOnly, callable $sendHeaders, callable $sendBody): void
+    {
+        for ($hop = 0; $hop <= 6; $hop++) {
+            $p = parse_url($url);
+            $host = is_array($p) ? (string)($p['host'] ?? '') : '';
+            if (!is_array($p) || ($p['scheme'] ?? '') !== 'https' || $host === '' || isset($p['user']) || isset($p['pass'])) {
+                throw new RuntimeException('Refusing a non-HTTPS download link.');
+            }
+            $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
+            if ($ip === $host && !filter_var($host, FILTER_VALIDATE_IP)) throw new RuntimeException('Download host is not a public address.');
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                throw new RuntimeException('Download host is not a public address.');
+            }
+            $headers = ['User-Agent: ' . self::UA];
+            if (preg_match(self::HOST_RE, $host)) $headers[] = 'Cookie: ' . $this->cookie;
+            if ($range !== '' && preg_match('/^bytes=\d*-\d*$/D', $range)) $headers[] = 'Range: ' . $range;
+
+            $status = 0; $loc = ''; $resp = []; $sent = false; $stopped = false;
+            $ch = curl_init($url);
+            $opts = [
+                CURLOPT_HTTPHEADER => $headers, CURLOPT_FOLLOWLOCATION => false, CURLOPT_RETURNTRANSFER => false,
+                CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 0, CURLOPT_LOW_SPEED_LIMIT => 1024, CURLOPT_LOW_SPEED_TIME => 60,
+                CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+                CURLOPT_HEADERFUNCTION => function ($c, string $line) use (&$status, &$loc, &$resp): int {
+                    if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) { $status = (int)$m[1]; $loc = ''; $resp = []; }
+                    elseif (strpos($line, ':') !== false) {
+                        [$k, $v] = explode(':', $line, 2);
+                        $resp[strtolower(trim($k))] = trim($v);
+                        if (strtolower(trim($k)) === 'location') $loc = trim($v);
+                    }
+                    return strlen($line);
+                },
+                CURLOPT_WRITEFUNCTION => function ($c, string $data) use (&$status, &$resp, &$sent, &$stopped, $sendHeaders, $sendBody): int {
+                    if ($status !== 200 && $status !== 206) return strlen($data);          // redirect/error body: discard
+                    if (!$sent) { $sent = true; $sendHeaders($status, $resp); }
+                    if (!$sendBody($data)) { $stopped = true; return 0; }
+                    return strlen($data);
+                },
+            ];
+            if ($headOnly) $opts[CURLOPT_NOBODY] = true;
+            curl_setopt_array($ch, $opts);
+            $ok = curl_exec($ch);
+            $err = curl_error($ch);
+            curl_close($ch);
+
+            if ($headOnly && ($status === 200 || $status === 206)) { $sendHeaders($status, $resp); return; }
+            if ($stopped) return;
+            if (in_array($status, [301, 302, 303, 307, 308], true) && $loc !== '') { $url = self::absoluteUrl($url, $loc); continue; }
+            if ($status === 200 || $status === 206) { if ($ok === false && !$sent) throw new RuntimeException('Download failed: ' . $err); return; }
+            throw new RuntimeException('Download failed (HTTP ' . $status . ').');
+        }
+        throw new RuntimeException('Too many download redirects.');
+    }
+
     /** Chunk size used by terabox-api-ruby Helper.get_chunk_size (4 MiB up to 4 GiB, then larger steps). */
     public static function chunkSize(int $size): int
     {
