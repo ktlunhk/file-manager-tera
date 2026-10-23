@@ -1,113 +1,155 @@
 <?php
 declare(strict_types=1);
+/**
+ * CAPTCHA endpoint used by captcha.js (actions: load, verify).
+ *
+ * Always answers JSON. The TeraBox cookie jar, the challenge id and the verified
+ * ticket stay in the PHP session; the browser only receives rendering data.
+ */
 define('TB_NO_AUTH_GATE', true);
-require __DIR__ . '/bootstrap.php';
-require __DIR__ . '/captcha_support.php';
-header('Content-Type: application/json; charset=UTF-8');
-header('X-Content-Type-Options: nosniff');
-header('Referrer-Policy: no-referrer');
-header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
 
-function captcha_reply(int $status, array $data): void
+// Never let a PHP warning/notice or fatal turn into an HTML page: captcha.js parses JSON.
+ini_set('display_errors', '0');
+ob_start();
+
+function image_out(array $payload, int $status = 200): void
 {
-    if (!TB_DEBUG) unset($data['code']);
+    while (ob_get_level() > 0) { ob_end_clean(); }
     http_response_code($status);
-    echo json_encode($data, JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+    header('Content-Type: application/json; charset=UTF-8');
+    header('X-Content-Type-Options: nosniff');
+    echo json_encode($payload, JSON_INVALID_UTF8_SUBSTITUTE | JSON_UNESCAPED_SLASHES);
     exit;
 }
+
+register_shutdown_function(function (): void {
+    $e = error_get_last();
+    if ($e && in_array($e['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR], true)) {
+        while (ob_get_level() > 0) { @ob_end_clean(); }
+        if (!headers_sent()) {
+            http_response_code(500);
+            header('Content-Type: application/json; charset=UTF-8');
+        }
+        echo json_encode(['ok' => false, 'message' => 'The challenge service failed. Please try again.']);
+    }
+});
+
+try {
+    require __DIR__ . '/bootstrap.php';
+    require __DIR__ . '/captcha_support.php';
+} catch (Throwable $e) {
+    image_out(['ok' => false, 'message' => 'The challenge service could not start.'], 500);
+}
+
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
-    header('Allow: POST');
-    captcha_reply(405, ['ok' => false, 'message' => 'Start from the login form. This endpoint accepts protected CAPTCHA requests only.']);
+    image_out(['ok' => false, 'message' => 'POST required.'], 405);
 }
-if ($_GET !== [] || (int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 4096) {
-    captcha_reply(400, ['ok' => false, 'message' => 'Invalid CAPTCHA request.']);
+if (!csrf_ok($_POST['csrf'] ?? null)) {
+    image_out(['ok' => false, 'session_expired' => true, 'csrf' => csrf_token(),
+               'message' => csrf_error_message()], 403);
 }
-if (!csrf_ok(is_string($_POST['csrf'] ?? null) ? $_POST['csrf'] : null)) {
-    captcha_reply(403, ['ok' => false, 'message' => csrf_error_message(), 'session_expired' => true, 'csrf' => csrf_token()]);
-}
-$action = $_POST['action'] ?? '';
-if (!in_array($action, ['load', 'verify'], true)) {
-    captcha_reply(400, ['ok' => false, 'message' => 'Unsupported CAPTCHA action.']);
-}
-$pending = &$_SESSION['tb_pending_captcha'];
-if (!is_array($pending) || (int)($pending['expires'] ?? 0) <= time()
+
+$action = (string)($_POST['action'] ?? '');
+$now = time();
+$pending = $_SESSION['tb_pending_captcha'] ?? null;
+if (!is_array($pending) || (int)($pending['expires'] ?? 0) <= $now
     || !preg_match('/^[0-9]{8,24}$/D', (string)($pending['request_id'] ?? ''))) {
     unset($_SESSION['tb_pending_captcha']);
-    captcha_reply(410, ['ok' => false, 'message' => 'Challenge expired. Make one manual sign-in attempt to obtain a new challenge.']);
+    image_out(['ok' => false, 'session_expired' => true, 'csrf' => csrf_token(),
+               'message' => 'The verification expired. Enter your password and sign in again.'], 410);
 }
-if ((int)($pending['verify_failures'] ?? 0) >= TB_MAX_CAPTCHA_FAILURES) {
-    captcha_reply(429, ['ok' => false, 'message' => 'Challenge attempt limit reached.']);
+$rid = (string)$pending['request_id'];
+
+/** Upstream answers either flat or under "data"; return the first array holding any of $keys. */
+function image_pick(array $r, array $keys): array
+{
+    foreach ([$r, $r['data'] ?? null, $r['data']['challenge'] ?? null, $r['challenge'] ?? null] as $c) {
+        if (!is_array($c)) continue;
+        foreach ($keys as $k) {
+            if (array_key_exists($k, $c)) return $c;
+        }
+    }
+    return [];
 }
-$now = microtime(true);
-if ($now - (float)($pending['last_api_call'] ?? 0) < 1) {
-    captcha_reply(429, ['ok' => false, 'message' => 'Please wait a moment and try again.']);
-}
-if ((int)($pending['api_calls'] ?? 0) >= 20) {
-    captcha_reply(429, ['ok' => false, 'message' => 'Challenge attempt limit reached. Wait for this challenge to expire.']);
-}
-$pending['last_api_call'] = $now;
-$pending['api_calls'] = (int)($pending['api_calls'] ?? 0) + 1;
-$api = new TeraBoxAuth((string)$pending['cookie'], (string)$pending['whost']);
+function image_code(array $r): int { return (int)($r['errno'] ?? $r['code'] ?? 0); }
+
 try {
+    $auth = new TeraBoxAuth((string)$pending['cookie'], (string)$pending['whost']);
+
     if ($action === 'load') {
-        unset($pending['capt_token'], $pending['ticket_expires'], $pending['challenge_id'], $pending['geometry']);
-        $response = $api->getSlide($pending['request_id']);
-        $pending['cookie'] = $api->getCookie();
-        $code = (int)($response['errno'] ?? $response['code'] ?? -1);
-        tb_log('captcha_load', ['code' => $code, 'trace' => $api->getTrace()]);
-        if ($code !== 0 || !is_array($response['data'] ?? null)) {
-            captcha_reply(502, ['ok' => false, 'message' => 'TeraBox did not return a drag-and-drop challenge.', 'code' => $code]);
+        // Cap how many challenges one failed login may pull.
+        $pending['loads'] = (int)($pending['loads'] ?? 0) + 1;
+        if ($pending['loads'] > 20) {
+            $_SESSION['tb_pending_captcha'] = $pending;
+            image_out(['ok' => false, 'message' => 'Too many challenges. Sign in again to start over.'], 429);
         }
-        $raw = $response['data'];
-        $challengeId = $raw['challenge_id'] ?? null;
-        if ((!is_string($challengeId) && !is_int($challengeId)) || (string)$challengeId === '' || strlen((string)$challengeId) > 512) {
-            throw new RuntimeException('Unsupported challenge identifier.');
+        unset($pending['challenge_id'], $pending['capt_token'], $pending['ticket_expires'], $pending['tile_x'], $pending['tile_y']);
+
+        $r = $auth->getSlide($rid);
+        $pending['cookie'] = $auth->getCookie();
+        if (image_code($r) !== 0) {
+            $_SESSION['tb_pending_captcha'] = $pending;
+            tb_log('captcha_load_rejected', ['code' => image_code($r), 'keys' => array_keys($r)]);
+            image_out(['ok' => false, 'message' => 'TeraBox did not provide a challenge. Load another challenge or sign in again.'], 502);
         }
-        $render = captcha_render_data($raw);
-        $pending['challenge_id'] = (string)$challengeId;
-        $pending['geometry'] = array_diff_key($render, ['master_image' => true, 'tile_image' => true]);
-        captcha_reply(200, ['ok' => true, 'challenge' => $render]);
-    }
-    if (empty($pending['challenge_id']) || empty($pending['geometry'])) {
-        captcha_reply(409, ['ok' => false, 'message' => 'Load a fresh challenge before verifying.']);
-    }
-    $g = $pending['geometry'];
-    foreach (['delta_x', 'delta_y'] as $field) {
-        if (!is_string($_POST[$field] ?? null) || !preg_match('/^-?[0-9]{1,5}$/D', $_POST[$field])) {
-            captcha_reply(400, ['ok' => false, 'message' => 'Invalid drag coordinates.']);
+        $d = image_pick($r, ['master_image']);
+        $cid = $d['challenge_id'] ?? $r['challenge_id'] ?? ($r['data']['challenge_id'] ?? '');
+        if (!is_string($cid) && !is_int($cid)) $cid = '';
+        $cid = (string)$cid;
+        if ($d === [] || $cid === '' || strlen($cid) > 512) {
+            $_SESSION['tb_pending_captcha'] = $pending;
+            tb_log('captcha_load_shape', ['keys' => array_keys($r), 'data_keys' => is_array($r['data'] ?? null) ? array_keys($r['data']) : []]);
+            image_out(['ok' => false, 'message' => 'Unexpected challenge response from TeraBox.'], 502);
         }
+        $challenge = captcha_render_data($d);
+        $pending['challenge_id'] = $cid;
+        $pending['tile_x'] = $challenge['tile_x'];
+        $pending['tile_y'] = $challenge['tile_y'];
+        $pending['challenge_at'] = $now;
+        $_SESSION['tb_pending_captcha'] = $pending;
+        image_out(['ok' => true, 'challenge' => $challenge]);
     }
-    $dx = (int)$_POST['delta_x']; $dy = (int)$_POST['delta_y'];
-    if ($dx < -$g['tile_x'] || $dx > $g['master_width'] - $g['tile_width'] - $g['tile_x']
-        || $dy < -$g['tile_y'] || $dy > $g['master_height'] - $g['tile_height'] - $g['tile_y']) {
-        captcha_reply(400, ['ok' => false, 'message' => 'Drag coordinates are outside the challenge.']);
-    }
-    $id = $pending['challenge_id'];
-    unset($pending['challenge_id'], $pending['geometry']); // one verification per fetched challenge
-    $response = $api->checkSlide($pending['request_id'], $id, $dx, $dy);
-    $pending['cookie'] = $api->getCookie();
-    $code = (int)($response['errno'] ?? $response['code'] ?? -1);
-    $token = $response['data']['capt_token'] ?? null;
-    $deadline = captcha_ticket_deadline($response['data']['expire'] ?? null, time());
-    $accepted = $code === 0 && is_string($token) && $token !== '' && strlen($token) <= 8192 && $deadline > time();
-    tb_log('captcha_verify', ['code' => $code, 'ticket_received' => $accepted, 'trace' => $api->getTrace()]);
-    if (!$accepted) {
-        $pending['verify_failures'] = (int)($pending['verify_failures'] ?? 0) + 1;
-        tb_log('captcha_fail', ['attempts' => $pending['verify_failures']]);
-        if ($pending['verify_failures'] >= TB_MAX_CAPTCHA_FAILURES) {
-            unset($_SESSION['tb_pending_captcha']);
-            rl_security_pause();
-            captcha_reply(429, ['ok' => false, 'message' => 'Too many verification attempts. Please wait before signing in again.']);
+
+    if ($action === 'verify') {
+        $cid = (string)($pending['challenge_id'] ?? '');
+        if ($cid === '' || $now - (int)($pending['challenge_at'] ?? 0) > 300) {
+            image_out(['ok' => false, 'message' => 'Challenge expired. Load another challenge.'], 400);
         }
-        captcha_reply(200, ['ok' => false, 'message' => $code === 0
-            ? 'Could not complete verification. Load another challenge.'
-            : 'Verification was not accepted. Load another challenge and try again.', 'code' => $code]);
+        $dx = $_POST['delta_x'] ?? '';
+        $dy = $_POST['delta_y'] ?? '';
+        if (!is_string($dx) || !is_string($dy) || !preg_match('/^-?[0-9]{1,5}$/D', $dx) || !preg_match('/^-?[0-9]{1,5}$/D', $dy)
+            || abs((int)$dx) > 4096 || abs((int)$dy) > 4096) {
+            image_out(['ok' => false, 'message' => 'Invalid position.'], 400);
+        }
+        // A challenge may be answered once; a miss needs a new one.
+        unset($pending['challenge_id']);
+        $r = $auth->checkSlide($rid, $cid, (int)$dx, (int)$dy);
+        $pending['cookie'] = $auth->getCookie();
+
+        $tokenHolder = image_pick($r, ['capt_token']);
+        $token = $tokenHolder['capt_token'] ?? '';
+        if (image_code($r) === 0 && is_string($token) && $token !== '' && strlen($token) <= 4096
+            && !preg_match('/[\x00-\x1f\x7f]/', $token)) {
+            $expire = $tokenHolder['expire'] ?? $tokenHolder['expires'] ?? $tokenHolder['expire_time']
+                ?? $r['expire'] ?? $r['expires'] ?? null;
+            $pending['capt_token'] = $token;
+            $pending['ticket_expires'] = captcha_ticket_deadline($expire, $now);
+            $_SESSION['tb_pending_captcha'] = $pending;
+            image_out(['ok' => true, 'message' => 'Verification accepted.']);
+        }
+        unset($pending['capt_token'], $pending['ticket_expires']);
+        $_SESSION['tb_pending_captcha'] = $pending;
+        tb_log('captcha_verify_rejected', ['code' => image_code($r), 'keys' => array_keys($r)]);
+        image_out(['ok' => false, 'message' => 'Position not accepted. Load another challenge and try again.'], 400);
     }
-    $pending['capt_token'] = $token;
-    $pending['ticket_expires'] = min($deadline, (int)$pending['expires']);
-    captcha_reply(200, ['ok' => true, 'verified' => true, 'message' => 'Verification accepted.']);
-} catch (Throwable $exception) {
-    $pending['cookie'] = $api->getCookie();
-    tb_log('captcha_api_error', ['kind' => get_class($exception), 'trace' => $api->getTrace()]);
-    captcha_reply(502, ['ok' => false, 'message' => 'Could not load or verify this challenge. Use the official-site link if it continues.']);
+
+    image_out(['ok' => false, 'message' => 'Unknown action.'], 400);
+} catch (Throwable $ex) {
+    if (is_array($pending ?? null)) {
+        if (isset($auth) && $auth instanceof TeraBoxAuth) $pending['cookie'] = $auth->getCookie();
+        $_SESSION['tb_pending_captcha'] = $pending;
+    }
+    tb_log('captcha_error', ['action' => $action, 'msg' => $ex->getMessage()]);
+    image_out(['ok' => false, 'message' => tb_public_error('Challenge error: ' . $ex->getMessage(),
+        'Could not load the challenge. Please try again.')], 502);
 }
