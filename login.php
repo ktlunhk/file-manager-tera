@@ -34,6 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST' && ($rem = remember_get()) !== null) {
             $_SESSION['cookie'] = $api->getCookie();
             $_SESSION['whost']  = $api->getWhost();
             $_SESSION['email']  = (string)($rem['email'] ?? '');
+            fm_log_user_login(($rem['email'] ?? '') !== '' ? (string)$rem['email'] : '(session token)', true);
             login_redirect();
         }
         remember_clear();                       // TeraBox no longer accepts it
@@ -67,17 +68,21 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = trim((string)($_POST['email'] ?? ''));
     $password = (string)($_POST['password'] ?? '');
+    $auditUser = $isToken ? '(session token)' : $email;   // token sign-in has no username; the token itself is never logged
     tb_log('login_post', ['email' => tb_mask_email($email), 'remember' => ($_POST['remember'] ?? '') === '1' ? 1 : 0,
                           'bid_cookie' => isset($_COOKIE['tb_bid']) ? 1 : 0, 'remember_cookie' => isset($_COOKIE['tb_remember']) ? 1 : 0,
                           'password_supplied' => $password !== '' ? 1 : 0, 'env' => tb_env()]);
 
     if (!csrf_ok($_POST['csrf'] ?? null)) {
         $error = csrf_error_message();
+        fm_log_user_login($auditUser, false, 'invalid_security_token');
         tb_log('csrf_fail', ['reason' => $GLOBALS['tb_csrf_reason'] ?? '', 'token_len' => strlen((string)($_POST['csrf'] ?? ''))]);
     } elseif ($isToken && !TB_TOKEN_LOGIN_ENABLED) {
         $error = 'Session-token sign-in is disabled.';
+        fm_log_user_login($auditUser, false, 'invalid_request');
     } elseif (!$isToken && ($wait = rl_wait()) > 0) {
         tb_log('throttled', ['wait_s' => $wait]);
+        fm_log_user_login($auditUser, false, 'login_cooldown');
         // Hammering TeraBox while it is limiting logins only extends the block, so we do not forward the attempt.
         $error = 'Please wait ' . $wait . ' seconds before trying again.';
     } elseif ($isToken) {
@@ -87,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = 'That does not look like an ndus value. Paste only the value of the ndus cookie.';
             $openToken = true;
             tb_log('token_bad_format', ['len' => strlen($tok)]);
+            fm_log_user_login($auditUser, false, 'invalid_request');
         } else {
             try {
                 $api = new TeraBoxAuth($tok);
@@ -100,6 +106,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $_SESSION['cookie'] = $api->getCookie();
                     $_SESSION['whost']  = $api->getWhost();
                     $_SESSION['email']  = '';
+                    fm_log_user_login($auditUser, true);
                     if (($_POST['remember'] ?? '') === '1') {
                         remember_set(['ndus' => $tok, 'browserid' => '', 'whost' => $api->getWhost(), 'email' => '']);
                     } else { remember_clear(); }
@@ -107,9 +114,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     login_redirect();
                 }
                 rl_fail();
+                fm_log_user_login($auditUser, false, 'invalid_credentials');
                 $error = 'TeraBox did not accept that token (errno ' . (int)($chk['errno'] ?? -1) . '). Copy the current ndus value while you are signed in at terabox.com.';
             } catch (Throwable $ex) {
                 tb_log('token_error', ['msg' => $ex->getMessage()]);
+                fm_log_user_login($auditUser, false, 'service_error');
                 $error = tb_public_error('Could not verify the token: ' . $ex->getMessage(), 'Could not verify the session. Please try again.');
             }
             $openToken = true;
@@ -117,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL) || $password === '') {
         $error = 'Enter a valid email and password.';
         tb_log('bad_input');
+        fm_log_user_login($auditUser, false, 'invalid_request');
     } else {
         try {
             $pending = $_SESSION['tb_pending_captcha'] ?? null;
@@ -146,6 +156,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $_SESSION['cookie'] = $result['cookie'];  // TeraBox cookie jar (no password)
                 $_SESSION['whost']  = $result['whost'];   // region host
                 $_SESSION['email']  = $email;
+                fm_log_user_login($auditUser, true);
                 tb_set_browser_id((string)$result['browserid']);
                 if (($_POST['remember'] ?? '') === '1') {
                     remember_set(['ndus' => $result['ndus'], 'browserid' => $result['browserid'],
@@ -156,6 +167,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (TB_REUSE_BROWSER_ID) tb_set_browser_id($auth->getBrowserId());
+            // Audit category. 460030 = slider challenge (a step, not a wrong password); 44 = "user not exist".
+            // Other TeraBox codes are logged as service_error; add known wrong-password codes to the list below.
+            $auditCategory = (int)$result['code'] === 460030 ? 'verification_required'
+                : (in_array((int)$result['code'], [44], true) ? 'invalid_credentials' : 'service_error');
+            fm_log_user_login($auditUser, false, $auditCategory);
             // Code 460030 is a challenge, not a wrong password. Other unknown codes
             // must not be assumed to mean wrong credentials either.
             if ((int)$result['code'] !== 460030) {
@@ -190,6 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             tb_log('login_error', ['email' => tb_mask_email($email), 'msg' => $ex->getMessage(),
                    'ms' => (int)((microtime(true) - $t0) * 1000), 'trace' => $auth ? $auth->getTrace() : [], 'debug' => $auth ? $auth->getDebug() : []]);
             tb_log('login_transport_error');
+            fm_log_user_login($auditUser, false, 'service_error');
             $error = tb_public_error('Could not complete the TeraBox login: ' . $ex->getMessage(), 'Could not sign in right now. Please try again.');
         }
     }
@@ -229,23 +246,26 @@ if (login_is_ajax() && $_SERVER['REQUEST_METHOD'] === 'POST') {
   details.tok p.hint { color:var(--muted); font-size:.82rem; line-height:1.5; }
   .err { background:var(--errbg); color:var(--err); padding:10px 12px; border-radius:8px; font-size:.9rem; margin-bottom:6px; }
   .login-layout { width:100%; max-width:380px; display:grid; grid-template-columns:minmax(0,380px); gap:20px; align-items:start; }
-  .login-layout.has-captcha { max-width:850px; grid-template-columns:minmax(0,380px) minmax(0,450px); }
+  .login-layout.has-captcha { max-width:780px; grid-template-columns:minmax(0,380px) minmax(0,380px); }
   .login-layout .card { max-width:none; min-width:0; }
-  .verify-panel { margin:0; padding:18px; border:1px solid var(--border); border-radius:14px; background:var(--card); min-width:0; box-shadow:0 8px 30px rgba(0,0,0,.06); }
+  .verify-panel { margin:0; padding:32px 28px 24px; border:1px solid var(--border); border-radius:14px; background:var(--card); min-width:0; box-shadow:0 8px 30px rgba(0,0,0,.06); }
   .verify-panel h2 { font-size:1.05rem; margin:0 0 8px; }
-  .verify-panel .verify-note { margin:0 0 12px; }
+  .verify-panel .verify-note { display:none; } /* the status line below says the same once the challenge loads */
   .verify-panel .verify-actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-top:12px; }
   .verify-panel .verify-actions a { font-size:.86rem; }
   .verify-panel .verify-actions button { margin:0; width:auto; padding:10px 14px; font-size:.88rem; }
-  @media (max-width:780px) { .login-layout.has-captcha { max-width:450px; grid-template-columns:minmax(0,1fr); } }
+  @media (max-width:780px) { .login-layout.has-captcha { max-width:380px; grid-template-columns:minmax(0,1fr); } }
   @media (min-width:781px) { body:has(.has-captcha) { align-items:center; } }
   .verify-panel p { font-size:.83rem; color:var(--muted); line-height:1.55; }
   .verify-panel a { color:var(--primary); }
   .verify-panel button { margin-top:10px; }
   .verify-panel .status { font-size:.85rem; margin-top:10px; }
+  .verify-panel > .status:last-child { margin-bottom:0; }
+  #captcha-status { min-height:3.1em; } /* room for the two-line instruction, so the panel height does not change after loading */
 
-  #captcha-stage { position:relative; width:100%; max-width:360px; overflow:hidden; user-select:none; margin:12px auto; background:var(--bg); border-radius:8px; }
-  #captcha-stage[hidden] { display:none; }
+  #captcha-stage { position:relative; width:100%; max-width:300px; aspect-ratio:360 / 264; overflow:hidden; user-select:none; margin:12px auto; background:var(--bg); border-radius:8px; }
+  /* While a challenge loads, keep the image area's space (invisible) so the panel does not shrink and jump. */
+  #captcha-stage[hidden] { display:block !important; visibility:hidden; }
   #captcha-master { display:block; width:100%; height:100%; pointer-events:none; }
   #captcha-tile { position:absolute; cursor:grab; touch-action:none; user-select:none; max-width:none; }
   #captcha-tile:focus-visible { outline:3px solid var(--primary); }
@@ -307,7 +327,7 @@ if (login_is_ajax() && $_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="captcha-controls">
           <button id="captcha-load" type="button">Load another challenge</button>
-          <button id="captcha-verify" type="button" disabled>Verify position</button>
+		  <button id="captcha-verify" type="button" hidden>Verify position</button>
         </div>
         <noscript>JavaScript is required to complete security verification.</noscript>
       </div>
