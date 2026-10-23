@@ -19,6 +19,10 @@ const TB_STOP_ON_SECURITY_ERROR = true;
 const TB_REUSE_BROWSER_ID = true;
 const TB_LOG_MAX = 1048576;
 
+/* ---- Direct download links (direct.php) ---- */
+// Days a direct link stays valid. 0 = never expires (until you stop it).
+const TB_DIRECT_DAYS = 30;
+
 /* ---- File manager ---- */
 $storage_type = 'terabox';
 $use_auth = false;                 // sign-in is handled by login.php, not by Tiny File Manager
