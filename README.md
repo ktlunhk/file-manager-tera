@@ -1,2 +1,1 @@
-# file-manager-tera
-Created by myGitSync
+It ia a web file manager which can connect to Tera Cloud Storage for normal file operation.
