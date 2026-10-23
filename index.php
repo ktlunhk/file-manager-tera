@@ -6291,7 +6291,7 @@ function fm_show_nav_path($path)
         <?php if (true): ?><a href="?tb_recycle=1&amp;p="><i class="fa fa-trash-o" aria-hidden="true"></i> <?php echo lng('Rubbish Bin'); ?></a><?php endif; ?>
         <?php if (true): ?><a href="?mega_shared_links=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>"><i class="fa fa-link" aria-hidden="true"></i> <?php echo lng('Shared Links'); ?></a><?php endif; ?>
         <?php if (!FM_READONLY): ?><a href="?p=<?php echo urlencode(FM_PATH); ?>&amp;settings=1"><i class="fa fa-cog"></i> <?php echo lng('Settings'); ?></a><?php endif; ?>
-        <form method="post" action="logout.php" style="display:contents"><input type="hidden" name="csrf" value="<?php echo e(csrf_token()); ?>"><button type="submit" style="border:0;background:none;padding:0;font:inherit;color:inherit;text-align:inherit;cursor:pointer;width:100%;display:block"><i class="fa fa-sign-out"></i> <?php echo lng('Logout'); ?></button></form>
+        <form method="post" action="logout.php" style="display:contents"><input type="hidden" name="csrf" value="<?php echo e(csrf_token()); ?>"><a href="?logout=1" onclick="this.parentNode.submit();return false;"><i class="fa fa-sign-out"></i> <?php echo lng('Logout'); ?></a></form>
       </div>
     </div>
     <script>
@@ -7977,7 +7977,7 @@ html[data-bs-theme="dark"] #mega-folder-picker #mega-folder-entries > button:foc
  body .mega-mobile-heading small{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .mega-mobile-menu:not([hidden]){display:flex;position:absolute;right:4px;top:49px;width:220px;max-height:calc(100dvh - 65px);overflow-y:auto;flex-direction:column;padding:5px;background:var(--bs-body-bg,#fff);border:1px solid var(--bs-border-color,#d5dce4);border-radius:9px;box-shadow:0 8px 26px #0003;z-index:1100}
  body .mega-mobile-menu a,body .mega-mobile-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:39px;padding:8px 10px;border:0;border-radius:5px;background:transparent;text-align:left;text-decoration:none;color:var(--bs-body-color,#222);font-size:13px}
- body .mega-mobile-menu i{width:17px;text-align:center}
+ body .mega-mobile-menu i{display:inline-flex;align-items:center;justify-content:center;flex:0 0 17px;width:17px;min-width:0;max-width:17px;overflow:visible;text-align:center;line-height:1}
  body .mega-mobile-menu a:active,body .mega-mobile-menu button:active{background:var(--bs-secondary-bg,#e7ebf0)}
  body .mega-mobile-menu .mega-mobile-selection-label{padding:6px 10px;font-weight:600;font-size:12px}
  body .mega-mobile-menu hr{margin:4px 6px;border-color:var(--bs-border-color,#ddd)}
