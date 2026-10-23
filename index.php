@@ -10494,16 +10494,51 @@ function fm_show_rubbish_nav() {
 }
 
 
+function fm_direct_who() {
+    return (string)(!empty($_SESSION['email']) ? $_SESSION['email'] : ($_SESSION['ndus'] ?? ''));
+}
+
+/** Public address of a direct link on this site. */
+function fm_direct_url($token) {
+    $https = (!empty($_SERVER['HTTPS']) && strtolower((string)$_SERVER['HTTPS']) !== 'off') || strtolower((string)($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https' || strpos((string)($_SERVER['HTTP_CF_VISITOR'] ?? ''), 'https') !== false;
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+    if (!preg_match('/^[A-Za-z0-9.\-]+(:\d{1,5})?$/D', $host)) $host = (string)($_SERVER['SERVER_NAME'] ?? 'localhost');
+    $dir = rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/index.php'))), '/');
+    return ($https ? 'https://' : 'http://') . $host . $dir . '/direct.php?t=' . $token;
+}
+
+/** The owner's direct link for a file, created if it does not exist yet. Throws on failure. */
+function fm_direct_ensure($who, $handle, $name, $fsId, $size) {
+    require_once __DIR__ . '/direct_lib.php';
+    $rec = TeraDirect::findForPath($who, $handle);
+    if ($rec) return $rec;
+    $made = TeraDirect::create($who, (string)($_SESSION['cookie'] ?? $_SESSION['ndus'] ?? ''), (string)($_SESSION['whost'] ?? ''), $handle, (int)$fsId, (string)$name, (int)$size, defined('TB_DIRECT_DAYS') ? (int)TB_DIRECT_DAYS : 30);
+    return array('token' => $made['token'], 'exp' => $made['exp'], 'created' => time());
+}
+
+/** Find a shared file in the account: by its path, or (when the share list gives only a name) by searching for it. */
+function fm_direct_locate($hp, $name) {
+    $dh = TeraApi::find(trim($hp, '/'));
+    if ($dh && isset(TeraApi::$nodes[$dh]) && (int)TeraApi::$nodes[$dh]['t'] === 0) return array($dh, TeraApi::$nodes[$dh]['fs'], TeraApi::$nodes[$dh]['s']);
+    $j = TeraApi::client()->search((string)$name);
+    $hits = array();
+    foreach ((isset($j['list']) && is_array($j['list'])) ? $j['list'] : array() as $r) {
+        if (is_array($r) && empty($r['isdir']) && (string)($r['server_filename'] ?? '') === (string)$name && !empty($r['path']) && isset($r['fs_id'])) $hits[] = $r;
+    }
+    if (count($hits) === 1) return array((string)$hits[0]['path'], (string)$hits[0]['fs_id'], (int)($hits[0]['size'] ?? 0));
+    throw new Exception(count($hits) > 1 ? 'Several files have this name.' : 'File not found in your account.');
+}
+
 function fm_mega_link_page() {
     $folder = FM_PATH; $file = (string)($_GET['file'] ?? '');
-    $error = ''; $link = ''; $notice = ''; $hasShare = false; $shareId = '';
+    $error = ''; $link = ''; $notice = ''; $hasShare = false; $shareId = ''; $directRec = null; $directWho = ''; $directErr = '';
     if ($file === '' || $file === '.' || $file === '..' || basename($file) !== $file || strpos($file, "\0") !== false) {
         http_response_code(400); exit(lng('Invalid file'));
     }
     try {
         $handle = TeraApi::find(trim($folder . '/' . $file, '/'));
         if (!$handle || !isset(TeraApi::$nodes[$handle]) || (int)TeraApi::$nodes[$handle]['t'] !== 0) throw new Exception(html_entity_decode(lng('File not found'), ENT_QUOTES, 'UTF-8'));
-        $existing = TeraApi::findShare($handle);
+        $existing = TeraApi::findShare($handle); require_once __DIR__ . '/direct_lib.php'; $directWho = fm_direct_who(); $directRec = TeraDirect::findForPath($directWho, $handle); if ($directRec) TeraDirect::refreshCookie($directWho, $directRec['token'], (string)($_SESSION['cookie'] ?? $_SESSION['ndus'] ?? '')); elseif ($existing && !FM_READONLY) { try { $dn = TeraApi::$nodes[$handle]; $directRec = fm_direct_ensure($directWho, $handle, $file, $dn['fs'], $dn['s']); } catch (Throwable $e) { $directErr = $e->getMessage(); } } $directRec = TeraDirect::findForPath($directWho, $handle); if ($directRec) TeraDirect::refreshCookie($directWho, $directRec['token'], (string)($_SESSION['cookie'] ?? $_SESSION['ndus'] ?? ''));
         if ($existing) { $hasShare = true; $shareId = $existing['id']; $link = $existing['url']; }
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (FM_READONLY) throw new Exception(html_entity_decode(lng('Read-only mode'), ENT_QUOTES, 'UTF-8'));
@@ -10511,10 +10546,12 @@ function fm_mega_link_page() {
             $action = $_POST['share_action'] ?? 'create';
             if ($action === 'stop') {
                 if (!$existing || !TeraApi::stopShare($existing['id'])) throw new Exception(html_entity_decode(lng('Unable to stop sharing.'), ENT_QUOTES, 'UTF-8'));
+                TeraDirect::revokeByPath($directWho, $handle); $directRec = null;
                 $hasShare = false; $shareId = ''; $link = '';
                 $notice = lng('Sharing stopped.');
             } elseif ($action === 'create') {
                 if (!$existing) { $made = TeraApi::createShareLink($handle); $link = $made['url']; $shareId = $made['id']; }
+                try { $dn = TeraApi::$nodes[$handle]; $directRec = fm_direct_ensure($directWho, $handle, $file, $dn['fs'], $dn['s']); } catch (Throwable $e) { $directErr = $e->getMessage(); }
                 $hasShare = true;
                 $notice = lng('Link created.');
             } else { throw new Exception(html_entity_decode(lng('Invalid file'), ENT_QUOTES, 'UTF-8')); }
@@ -10526,10 +10563,15 @@ function fm_mega_link_page() {
       <p class="text-secondary"><?php echo lng('File'); ?>: <strong><?php echo fm_enc($file); ?></strong></p>
       <?php if ($error): ?><div class="mega-inline-notice mega-inline-notice--error" role="alert"><?php echo fm_enc($error); ?></div><?php endif; ?>
       <?php if ($notice): ?><div class="mega-inline-notice mega-inline-notice--success" role="status"><?php echo $notice; ?></div><?php endif; ?>
+      <?php if ($directErr): ?><div class="mega-inline-notice mega-inline-notice--error" role="alert"><?php echo fm_enc(lng('Direct link could not be created') . ': ' . $directErr); ?></div><?php endif; ?>
       <div class="mega-create-link-controls">
       <?php if ($link): ?><label for="mega-public-link" class="form-label"><?php echo lng('Public TeraBox Link'); ?></label>
       <input class="form-control mb-3" id="mega-public-link" type="text" readonly value="<?php echo fm_enc($link); ?>">
-      <div class="fm-unified-actions mega-search-actions mega-shared-link-actions"><button type="button" class="btn btn-outline-primary fm-unified-button" onclick="megaCopyPublicLink();"><i class="fa fa-copy"></i> <?php echo lng('Copy Link'); ?></button>
+      <?php if ($directRec): ?><label for="mega-direct-link" class="form-label"><?php echo lng('Direct download link'); ?></label>
+      <input class="form-control mb-1" id="mega-direct-link" type="text" readonly value="<?php echo fm_enc(fm_direct_url($directRec['token'])); ?>">
+      <p class="text-secondary small mb-3"><?php echo fm_enc(lng('Downloads from this server without a TeraBox sign-in.') . ' ' . (!empty($directRec['exp']) ? lng('Valid until') . ' ' . date('Y-m-d H:i', (int)$directRec['exp']) : lng('Does not expire'))); ?></p><?php endif; ?>
+      <div class="fm-unified-actions mega-search-actions mega-shared-link-actions"><button type="button" class="btn btn-outline-primary fm-unified-button" onclick="megaCopyPublicLink();"><i class="fa fa-copy"></i> <?php echo lng('Copy TeraBox Link'); ?></button>
+      <?php if ($directRec): ?><button type="button" class="btn btn-outline-primary fm-unified-button" onclick="megaCopyPublicLink('mega-direct-link');"><i class="fa fa-copy"></i> <?php echo lng('Copy Direct Link'); ?></button><?php endif; ?>
       <?php if (!FM_READONLY): ?><button type="button" class="btn btn-outline-danger fm-unified-button" <?php if (!$hasShare): ?>disabled aria-disabled="true"<?php endif; ?> data-handle="<?php echo fm_enc($shareId); ?>" data-name="<?php echo fm_enc($file); ?>" onclick="megaAskStopSharing(this.dataset.handle,this.dataset.name)"><i class="fa fa-unlink" aria-hidden="true"></i> <?php echo lng('Stop Sharing'); ?></button><?php endif; ?></div>
       <p class="text-secondary small mt-3"><?php echo lng('Anyone with this link can access the file. Share it carefully.'); ?></p><?php endif; ?>
       <form method="post" class="mt-3" data-mega-operation="share-create"><input type="hidden" name="share_action" value="create"><input type="hidden" name="token" value="<?php echo fm_enc($_SESSION['token'] ?? ''); ?>">
@@ -10559,14 +10601,26 @@ function fm_mega_shared_links_page() {
     try {
         if (($_SERVER['REQUEST_METHOD'] ?? '') === 'POST') {
             if (($_POST['share_action'] ?? '') !== 'stop') throw new Exception(html_entity_decode(lng('Invalid file'), ENT_QUOTES, 'UTF-8'));
+            require_once __DIR__ . '/direct_lib.php';
+            $stopId = (string)($_POST['share_handle'] ?? ''); $stopPath = '';
+            foreach (TeraApi::sharedLinks() as $sh) if ((string)$sh['id'] === $stopId && $sh['path'] !== '') $stopPath = '/' . ltrim($sh['path'], '/');
             fm_mega_revoke_public_link($_POST['share_handle'] ?? '');
+            if ($stopPath !== '' && $stopPath !== '/') TeraDirect::revokeByPath(fm_direct_who(), $stopPath);
             $notice = lng('Sharing stopped.');
         }
     } catch (Throwable $e) { $error = $e->getMessage(); }
     try {
         $items = [];
+        require_once __DIR__ . '/direct_lib.php'; $dmap = TeraDirect::mapForOwner(fm_direct_who()); $dmade = 0; $dbyname = array(); foreach ($dmap as $dr) { $dn0 = (string)($dr['name'] ?? ''); if ($dn0 === '') continue; $dbyname[$dn0] = isset($dbyname[$dn0]) ? false : $dr; }
         foreach (TeraApi::sharedLinks() as $sh) {
-            $items[] = ['url' => $sh['url'], 'node' => ['t' => $sh['isdir'] ? 1 : 0, 'n' => $sh['name'] !== '' ? $sh['name'] : ($sh['url'] !== '' ? $sh['url'] : 'Shared item'), 'h' => $sh['id']], 'verification' => $sh['verification'] ?? 'unknown'];
+            $hp = $sh['path'] !== '' ? '/' . ltrim($sh['path'], '/') : ''; $dname = $hp !== '' ? basename($hp) : ''; $derr = '';
+            $drec = ($hp !== '' && isset($dmap[$hp])) ? $dmap[$hp] : null;
+            if (!$drec && $dname !== '' && isset($dbyname[$dname]) && $dbyname[$dname] !== false) $drec = $dbyname[$dname];   // path in the share list can be just a name
+            if (!$drec && $hp !== '' && !$sh['isdir'] && !FM_READONLY && $dmade < 10) {
+                try { $loc = fm_direct_locate($hp, $dname); $drec = fm_direct_ensure(fm_direct_who(), $loc[0], $dname, $loc[1], $loc[2]); $dmade++; }
+                catch (Throwable $e) { $derr = $e->getMessage(); error_log('[tbfm] direct link for share failed: ' . $e->getMessage()); }
+            }
+            $items[] = ['url' => $sh['url'], 'direct' => $drec ? fm_direct_url($drec['token']) : '', 'direct_err' => $derr, 'node' => ['t' => $sh['isdir'] ? 1 : 0, 'n' => $sh['name'] !== '' ? $sh['name'] : ($sh['url'] !== '' ? $sh['url'] : 'Shared item'), 'h' => $sh['id']], 'verification' => $sh['verification'] ?? 'unknown'];
         }
     } catch (Throwable $e) { $items = []; $error = lng('Unable to load shared links.'); error_log('[tbfm] share list failed: ' . $e->getMessage()); }
     fm_show_header(); fm_show_nav_path(FM_PATH); ?>
@@ -10584,8 +10638,12 @@ function fm_mega_shared_links_page() {
             <label class="visually-hidden" for="shared-link-<?php echo $i; ?>"><?php echo lng('Public TeraBox Link'); ?></label>
             <?php if ($item['url'] !== ''): ?><input class="form-control mb-2" id="shared-link-<?php echo $i; ?>" readonly value="<?php echo fm_enc($item['url']); ?>">
             <?php else: ?><input class="form-control mb-2" type="text" disabled aria-label="<?php echo fm_enc(lng('Public TeraBox Link')); ?>" placeholder="<?php echo fm_enc(lng('Public link unavailable from TeraBox.')); ?>"><?php endif; ?>
+            <?php if (!empty($item['direct'])): ?><label class="visually-hidden" for="shared-direct-<?php echo $i; ?>"><?php echo lng('Direct download link'); ?></label>
+            <input class="form-control mb-2" id="shared-direct-<?php echo $i; ?>" readonly value="<?php echo fm_enc($item['direct']); ?>"><?php endif; ?>
+            <?php if (empty($item['direct']) && !empty($item['direct_err'])): ?><p class="text-secondary small mb-2"><?php echo fm_enc(lng('Direct link unavailable') . ': ' . $item['direct_err']); ?></p><?php endif; ?>
             <div class="fm-unified-actions mega-search-actions mega-shared-link-actions">
-              <?php if ($item['url'] !== ''): ?><button type="button" class="btn btn-outline-primary fm-unified-button" data-copy-id="shared-link-<?php echo $i; ?>" onclick="megaCopyPublicLink(this.dataset.copyId)"><i class="fa fa-copy" aria-hidden="true"></i> <?php echo lng('Copy Link'); ?></button><?php endif; ?>
+              <?php if ($item['url'] !== ''): ?><button type="button" class="btn btn-outline-primary fm-unified-button" data-copy-id="shared-link-<?php echo $i; ?>" onclick="megaCopyPublicLink(this.dataset.copyId)"><i class="fa fa-copy" aria-hidden="true"></i> <?php echo lng('Copy TeraBox Link'); ?></button><?php endif; ?>
+              <?php if (!empty($item['direct'])): ?><button type="button" class="btn btn-outline-primary fm-unified-button" data-copy-id="shared-direct-<?php echo $i; ?>" onclick="megaCopyPublicLink(this.dataset.copyId)"><i class="fa fa-copy" aria-hidden="true"></i> <?php echo lng('Copy Direct Link'); ?></button><?php endif; ?>
               <?php if (!FM_READONLY && $node['h'] !== ''): ?><button type="button" class="btn btn-outline-danger fm-unified-button" data-handle="<?php echo fm_enc($node['h']); ?>" data-name="<?php echo fm_enc($node['n']); ?>" onclick="megaAskStopSharing(this.dataset.handle,this.dataset.name)"><i class="fa fa-unlink" aria-hidden="true"></i> <?php echo lng('Stop Sharing'); ?></button><?php endif; ?>
             </div>
           </article>
