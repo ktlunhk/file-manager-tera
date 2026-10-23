@@ -248,3 +248,84 @@ function tb_env(): array
 }
 
 function tb_public_error(string $detail, string $message): string { return TB_DEBUG ? $detail : $message; }
+
+
+/* ---------- sign-in audit (same record format as the MEGA version) ----------
+ * One JSON object per line in user_login_YYYY-MM-DD.php (UTC day). The first line is a PHP guard, so a
+ * browser request returns 404; read the files over FTP / the host's file manager.
+ * Only this fixed schema is written. Never logged: passwords, cookies, ndus tokens, captcha data.
+ * Controlled by $user_logging_* in config.php (off by default). Separate from the diagnostic tb_log().
+ */
+if (!function_exists('fm_log_user_login')) {
+function fm_log_user_login($username, $success, $category = '') {
+    if (($GLOBALS['user_logging_enabled'] ?? false) !== true) return;
+    try {
+        $zone = new DateTimeZone($GLOBALS['user_logging_timezone'] ?? 'UTC');
+        $now = new DateTimeImmutable('now', $zone);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+        if (!is_string($ip) || filter_var($ip, FILTER_VALIDATE_IP) === false) $ip = '';
+        $clean = function($value, $limit) {
+            if (!is_string($value)) return '';
+            $value = substr($value, 0, $limit);
+            // Drop malformed UTF-8 rather than allowing it to break the record.
+            if (!preg_match('//u', $value)) $value = function_exists('iconv') ? @iconv('UTF-8', 'UTF-8//IGNORE', $value) : preg_replace('/[\x80-\xff]/', '', $value);
+            return is_string($value) ? $value : '';
+        };
+        $categories = ['invalid_credentials', 'invalid_security_token', 'login_cooldown', 'verification_required', 'two_factor_required', 'invalid_two_factor', 'service_error', 'invalid_request'];
+        if (!isset($GLOBALS['fm_login_request_id'])) $GLOBALS['fm_login_request_id'] = bin2hex(random_bytes(16));
+        $id = $GLOBALS['fm_login_request_id'];
+        $storage = $GLOBALS['storage_type'] ?? 'terabox';
+        $entry = json_encode([
+            'datetime' => $now->format('Y-m-d\TH:i:sP'),
+            'timezone' => $zone->getName(),
+            'username' => $clean($username, 512),
+            'ip' => $ip,
+            'status' => $success ? 'success' : 'failure',
+            'failure_category' => $success ? null : (in_array($category, $categories, true) ? $category : 'service_error'),
+            'storage' => in_array($storage, ['mega', 'terabox', 'local'], true) ? $storage : 'terabox',
+            'browser' => $clean($_SERVER['HTTP_USER_AGENT'] ?? '', 1024),
+            'request_id' => $id
+        ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
+        if ($entry === false) throw new RuntimeException('Invalid audit entry');
+        // UTC filenames keep retention unambiguous if the display timezone changes.
+        $path = __DIR__ . '/user_login_' . gmdate('Y-m-d') . '.php';
+        if (is_link($path)) throw new RuntimeException('Unsafe audit file');
+        $fh = @fopen($path, 'c+b');
+        if (!$fh) throw new RuntimeException('Audit file unavailable');
+        @chmod($path, 0600);
+        $prefix = "<?php http_response_code(404); exit; ?>\n";
+        try {
+            if (!flock($fh, LOCK_EX)) throw new RuntimeException('Audit lock unavailable');
+            rewind($fh); $current = fread($fh, strlen($prefix));
+            if ($current !== '' && $current !== $prefix) throw new RuntimeException('Invalid audit file');
+            fseek($fh, 0, SEEK_END);
+            $bytes = ($current === '' ? $prefix : '') . $entry . "\n";
+            while ($bytes !== '') {
+                $written = fwrite($fh, $bytes);
+                if (!$written) throw new RuntimeException('Audit write failed');
+                $bytes = substr($bytes, $written);
+            }
+            if (!fflush($fh)) throw new RuntimeException('Audit flush failed');
+        } finally { flock($fh, LOCK_UN); fclose($fh); }
+        if (!headers_sent()) header('X-Request-ID: ' . $id);
+        $days = $GLOBALS['user_logging_retention_days'] ?? 30;
+        if (!is_int($days) || $days < 0 || $days > 3650) $days = 30;
+        if ($days > 0) {
+            $cutoff = (new DateTimeImmutable('today', new DateTimeZone('UTC')))->modify('-' . ($days - 1) . ' days')->format('Y-m-d');
+            foreach (glob(__DIR__ . '/user_login_????-??-??.php') ?: [] as $old) {
+                if (is_link($old) || !is_file($old) || !preg_match('/\Auser_login_(\d{4}-\d{2}-\d{2})\.php\z/', basename($old), $m) || $m[1] >= $cutoff) continue;
+                $parts = explode('-', $m[1]);
+                if (!checkdate((int)$parts[1], (int)$parts[2], (int)$parts[0])) continue;
+                $candidate = @fopen($old, 'rb');
+                if (!$candidate) continue;
+                $protected = fread($candidate, strlen($prefix)) === $prefix;
+                fclose($candidate);
+                if ($protected) @unlink($old);
+            }
+        }
+    } catch (Throwable $e) {
+        // A logging failure never prevents login and never discloses credentials.
+        error_log('[filemanager] Unable to write login audit. Check folder permissions and logging configuration.');
+    }
+}
+}
