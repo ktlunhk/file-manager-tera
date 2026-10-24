@@ -9518,29 +9518,43 @@ body.theme-dark #mega-excel-viewer #mega-excel-grid th {
 #megaBulkConfirm .modal-body h5 {margin:0!important;line-height:1.3;}
 #megaBulkConfirm .modal-body p:empty {display:none;}
 #renameDialog .modal-content,#megaMessageDialog .modal-content{height:auto;min-height:var(--mega-operation-dialog-height);}
-/* Keep each shared link's two actions together, including mobile layouts. */
+/* Shared-link actions: two copy buttons side by side (labels wrap instead of scrolling), Stop Sharing centred below. */
 html body #wrapper .mega-search-page .mega-shared-link-actions {
   display:grid!important;
-  grid-template-columns:repeat(2,minmax(max-content,1fr))!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
   flex-wrap:nowrap!important;
   gap:8px!important;
   width:100%!important;
-  overflow-x:auto;
+  overflow:visible!important;
 }
 html body #wrapper .mega-search-page .mega-shared-link-actions > .fm-unified-button {
   display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  text-align:center!important;
   width:100%!important;
   min-width:0!important;
   max-width:none!important;
   margin:0!important;
-  padding:9px 8px!important;
-  gap:6px!important;
-  white-space:nowrap!important;
+  padding:8px 6px!important;
+  gap:5px!important;
+  white-space:normal!important;
+  line-height:1.2!important;
+}
+html body #wrapper .mega-search-page .mega-shared-link-actions > .btn-outline-danger {
+  grid-column:1 / -1!important;
+  justify-self:center!important;
+  width:auto!important;
+  min-width:55%!important;
 }
 @media<?php echo fm_layout_media_query(); ?>{
   html body #wrapper .mega-search-page .mega-shared-link-actions > .fm-unified-button {
     font-size:13px!important;
   }
+  /* Use more of the screen width on phones. */
+  html body #wrapper .mega-search-page {padding-left:6px!important;padding-right:6px!important;}
+  html body #wrapper .mega-search-page .mega-search-card .card-body {padding:10px!important;}
+  html body #wrapper .mega-search-page .mega-search-card article.border {padding:8px!important;}
 }
 /* Desktop sharing actions use the same compact sizing as other page buttons. */
 @media<?php echo fm_desktop_media_query(); ?>{
