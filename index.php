@@ -9591,6 +9591,15 @@ html body #wrapper .mega-search-page .mega-shared-link-actions > .btn-outline-da
    order:0;
  }
 }
+/* Phones: Cancel and Create Link share one row (Cancel left, Create Link right); Stop Sharing, when shown, sits centred below. */
+@media<?php echo fm_layout_media_query(); ?>{
+ html body #wrapper .mega-create-link-controls > form{display:flex!important;flex-wrap:wrap;justify-content:center;align-items:stretch;gap:8px;}
+ html body #wrapper .mega-create-link-controls > form .fm-unified-actions{display:contents!important;}
+ html body #wrapper .mega-create-link-controls > form .fm-unified-actions > .fm-unified-button{flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important;}
+ html body #wrapper .mega-create-link-controls > form .mega-rubbish-close > .fm-unified-button{order:0;}
+ html body #wrapper .mega-create-link-controls > form .mega-shared-link-actions > .btn-primary{order:1;}
+ html body #wrapper .mega-create-link-controls > form .mega-shared-link-actions > .btn-outline-danger{order:2;flex:0 0 55%!important;}
+}
 /* Keep the Copy Link popup action centered and comfortably wide on all screens. */
 #megaMessageDialog .modal-footer > .btn {
   display:inline-flex;align-items:center;justify-content:center;gap:8px;
@@ -10514,7 +10523,7 @@ function fm_mega_link_page() {
       <?php if (!$link): ?>
       <div class="fm-unified-actions mega-search-actions mega-shared-link-actions">
       <?php if (!FM_READONLY): ?><button type="submit" class="btn btn-primary fm-unified-button"><i class="fa fa-link"></i> <?php echo lng('Create Link'); ?></button>
-      <?php if (!$link): ?><button type="button" class="btn btn-outline-danger fm-unified-button" <?php if (!$hasShare): ?>disabled aria-disabled="true"<?php endif; ?> data-handle="<?php echo fm_enc($shareId); ?>" data-name="<?php echo fm_enc($file); ?>" onclick="megaAskStopSharing(this.dataset.handle,this.dataset.name)"><i class="fa fa-unlink" aria-hidden="true"></i> <?php echo lng('Stop Sharing'); ?></button><?php endif; ?><?php endif; ?></div><?php endif; ?>
+      <?php if (!$link && $hasShare): ?><button type="button" class="btn btn-outline-danger fm-unified-button" <?php if (!$hasShare): ?>disabled aria-disabled="true"<?php endif; ?> data-handle="<?php echo fm_enc($shareId); ?>" data-name="<?php echo fm_enc($file); ?>" onclick="megaAskStopSharing(this.dataset.handle,this.dataset.name)"><i class="fa fa-unlink" aria-hidden="true"></i> <?php echo lng('Stop Sharing'); ?></button><?php endif; ?><?php endif; ?></div><?php endif; ?>
       <div class="fm-unified-actions mega-search-actions mega-rubbish-close"><a class="btn btn-outline-secondary fm-unified-button" href="?p=<?php echo rawurlencode($folder); ?>"><i class="fa fa-times"></i> <?php echo lng('Cancel'); ?></a></div>
 </form></div>
     </div></section></main>
