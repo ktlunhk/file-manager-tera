@@ -4027,7 +4027,7 @@ $all_files_size = 0;
                             <a title="<?php echo lng('CopyTo') ?>..."
                                 href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o"></i></a>
                         <?php endif; ?>
-                        <?php if (true): ?><a title="<?php echo lng('Create TeraBox Link'); ?>" aria-label="<?php echo lng('Create TeraBox Link'); ?>" href="?mega_link=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>&amp;file=<?php echo rawurlencode($f); ?>"><i class="fa fa-link" aria-hidden="true"></i></a><?php endif; ?>
+                        <?php if (true): ?><a title="<?php echo lng('Create Link'); ?>" aria-label="<?php echo lng('Create Link'); ?>" href="?mega_link=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>&amp;file=<?php echo rawurlencode($f); ?>"><i class="fa fa-link" aria-hidden="true"></i></a><?php endif; ?>
                         <button type="button" data-mega-download-url="?p=<?php echo urlencode(FM_PATH) ?>&amp;dl=<?php echo urlencode($f) ?>" title="<?php echo lng('Download') ?>" aria-label="<?php echo lng('Download') ?>" class="mega-download-action mega-download-direct"><i class="fa fa-download"></i></button>
                     </td>
                 </tr>
@@ -10504,7 +10504,7 @@ function fm_mega_link_page() {
     } catch (Throwable $e) { $error = $e->getMessage(); error_log('[tbfm] share failed: ' . $e->getMessage()); }
     fm_show_header(); fm_show_nav_path($folder); ?>
     <main class="container-fluid fm-page-content mega-search-page"><section class="card mega-search-card fm-form-panel mb-4" data-bs-theme="<?php echo FM_THEME; ?>">
-    <div class="card-header"><i class="fa fa-link fa-fw"></i> <?php echo lng('Create TeraBox Link'); ?></div><div class="card-body">
+    <div class="card-header"><i class="fa fa-link fa-fw"></i> <?php echo lng('Create Link'); ?></div><div class="card-body">
       <p class="text-secondary"><?php echo lng('File'); ?>: <strong><?php echo fm_enc($file); ?></strong></p>
       <?php if ($error): ?><div class="mega-inline-notice mega-inline-notice--error" role="alert"><?php echo fm_enc($error); ?></div><?php endif; ?>
       <?php if ($notice): ?><div class="mega-inline-notice mega-inline-notice--success" role="status"><?php echo $notice; ?></div><?php endif; ?>
