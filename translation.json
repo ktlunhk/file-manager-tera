@@ -148,7 +148,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Închide",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -209,7 +209,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie de autentificare",
+        "Login cookie warning": "Oricine are acest cookie poate folosi contul tău TeraBox. Păstrează-l privat și deconectează-te aici dacă a fost expus.",
+        "ndus (login token)": "ndus (token de autentificare)",
+        "Full cookie": "Cookie complet",
+        "Copy ndus": "Copiază ndus",
+        "Copy cookie": "Copiază cookie",
+        "Copied": "Copiat",
+        "No login cookie available": "Niciun cookie de autentificare disponibil pentru această sesiune."
       }
     },
     {
@@ -358,7 +366,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Bezárás",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -419,7 +427,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Bejelentkezési süti",
+        "Login cookie warning": "Aki ismeri ezt a sütit, használhatja a TeraBox-fiókodat. Tartsd titokban, és ha kiszivárog, jelentkezz ki itt.",
+        "ndus (login token)": "ndus (bejelentkezési token)",
+        "Full cookie": "Teljes süti",
+        "Copy ndus": "ndus másolása",
+        "Copy cookie": "Süti másolása",
+        "Copied": "Másolva",
+        "No login cookie available": "Ehhez a munkamenethez nincs bejelentkezési süti."
       }
     },
     {
@@ -568,7 +584,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Lukk",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -629,7 +645,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Påloggingscookie",
+        "Login cookie warning": "Alle med denne cookien kan bruke TeraBox-kontoen din. Hold den privat og logg ut her hvis den lekker.",
+        "ndus (login token)": "ndus (påloggingstoken)",
+        "Full cookie": "Full cookie",
+        "Copy ndus": "Kopier ndus",
+        "Copy cookie": "Kopier cookie",
+        "Copied": "Kopiert",
+        "No login cookie available": "Ingen påloggingscookie tilgjengelig for denne økten."
       }
     },
     {
@@ -779,7 +803,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "بستن",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -839,7 +863,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "کوکی ورود",
+        "Login cookie warning": "هر کسی که این کوکی را داشته باشد می‌تواند از حساب TeraBox شما استفاده کند. آن را خصوصی نگه دارید و در صورت درز، از اینجا خارج شوید.",
+        "ndus (login token)": "ndus (توکن ورود)",
+        "Full cookie": "کوکی کامل",
+        "Copy ndus": "کپی ndus",
+        "Copy cookie": "کپی کوکی",
+        "Copied": "کپی شد",
+        "No login cookie available": "کوکی ورودی برای این نشست در دسترس نیست."
       }
     },
     {
@@ -1060,7 +1092,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Закрыть",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -1128,7 +1160,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "Выбрано: {count}"
+        "{count} selected": "Выбрано: {count}",
+        "Login cookie": "Cookie входа",
+        "Login cookie warning": "Любой, у кого есть этот cookie, может пользоваться вашим аккаунтом TeraBox. Храните его в тайне и выйдите здесь, если он утёк.",
+        "ndus (login token)": "ndus (токен входа)",
+        "Full cookie": "Полный cookie",
+        "Copy ndus": "Копировать ndus",
+        "Copy cookie": "Копировать cookie",
+        "Copied": "Скопировано",
+        "No login cookie available": "Для этого сеанса cookie входа недоступен."
       }
     },
     {
@@ -1322,7 +1362,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Chiudi",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -1393,7 +1433,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selezionati"
+        "{count} selected": "{count} selezionati",
+        "Login cookie": "Cookie di accesso",
+        "Login cookie warning": "Chiunque abbia questo cookie può usare il tuo account TeraBox. Tienilo privato ed esci da qui se viene divulgato.",
+        "ndus (login token)": "ndus (token di accesso)",
+        "Full cookie": "Cookie completo",
+        "Copy ndus": "Copia ndus",
+        "Copy cookie": "Copia cookie",
+        "Copied": "Copiato",
+        "No login cookie available": "Nessun cookie di accesso disponibile per questa sessione."
       }
     },
     {
@@ -1614,7 +1662,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} sélectionné(s)"
+        "{count} selected": "{count} sélectionné(s)",
+        "Login cookie": "Cookie de connexion",
+        "Login cookie warning": "Toute personne disposant de ce cookie peut utiliser votre compte TeraBox. Gardez-le privé et déconnectez-vous ici s'il fuite.",
+        "ndus (login token)": "ndus (jeton de connexion)",
+        "Full cookie": "Cookie complet",
+        "Copy ndus": "Copier ndus",
+        "Copy cookie": "Copier le cookie",
+        "Copied": "Copié",
+        "No login cookie available": "Aucun cookie de connexion disponible pour cette session."
       }
     },
     {
@@ -1822,7 +1878,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} seleccionados"
+        "{count} selected": "{count} seleccionados",
+        "Login cookie": "Cookie de inicio de sesión",
+        "Login cookie warning": "Cualquiera que tenga esta cookie puede usar tu cuenta de TeraBox. Mantenla privada y cierra sesión aquí si se filtra.",
+        "ndus (login token)": "ndus (token de inicio de sesión)",
+        "Full cookie": "Cookie completa",
+        "Copy ndus": "Copiar ndus",
+        "Copy cookie": "Copiar cookie",
+        "Copied": "Copiado",
+        "No login cookie available": "No hay cookie de inicio de sesión disponible para esta sesión."
       }
     },
     {
@@ -1955,7 +2019,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Pechar",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -2016,7 +2080,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie de inicio de sesión",
+        "Login cookie warning": "Calquera persoa con esta cookie pode usar a túa conta de TeraBox. Mantéñea privada e pecha a sesión aquí se se filtra.",
+        "ndus (login token)": "ndus (token de inicio de sesión)",
+        "Full cookie": "Cookie completa",
+        "Copy ndus": "Copiar ndus",
+        "Copy cookie": "Copiar cookie",
+        "Copied": "Copiado",
+        "No login cookie available": "Non hai cookie de inicio de sesión dispoñible para esta sesión."
       }
     },
     {
@@ -2165,7 +2237,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Tanca",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -2226,7 +2298,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie d'inici de sessió",
+        "Login cookie warning": "Qualsevol persona amb aquesta cookie pot utilitzar el teu compte de TeraBox. Mantén-la privada i tanca la sessió aquí si es filtra.",
+        "ndus (login token)": "ndus (token d'inici de sessió)",
+        "Full cookie": "Cookie completa",
+        "Copy ndus": "Copia ndus",
+        "Copy cookie": "Copia la cookie",
+        "Copied": "Copiat",
+        "No login cookie available": "No hi ha cap cookie d'inici de sessió disponible per a aquesta sessió."
       }
     },
     {
@@ -2485,7 +2565,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} ausgewählt"
+        "{count} selected": "{count} ausgewählt",
+        "Login cookie": "Login-Cookie",
+        "Login cookie warning": "Jeder mit diesem Cookie kann dein TeraBox-Konto verwenden. Halte es privat und melde dich hier ab, falls es offengelegt wurde.",
+        "ndus (login token)": "ndus (Login-Token)",
+        "Full cookie": "Vollständiges Cookie",
+        "Copy ndus": "ndus kopieren",
+        "Copy cookie": "Cookie kopieren",
+        "Copied": "Kopiert",
+        "No login cookie available": "Für diese Sitzung ist kein Login-Cookie verfügbar."
       }
     },
     {
@@ -2618,7 +2706,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "ปิด",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -2679,7 +2767,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "คุกกี้เข้าสู่ระบบ",
+        "Login cookie warning": "ผู้ที่มีคุกกี้นี้สามารถใช้บัญชี TeraBox ของคุณได้ โปรดเก็บเป็นความลับ และออกจากระบบที่นี่หากรั่วไหล",
+        "ndus (login token)": "ndus (โทเค็นเข้าสู่ระบบ)",
+        "Full cookie": "คุกกี้ทั้งหมด",
+        "Copy ndus": "คัดลอก ndus",
+        "Copy cookie": "คัดลอกคุกกี้",
+        "Copied": "คัดลอกแล้ว",
+        "No login cookie available": "ไม่มีคุกกี้เข้าสู่ระบบสำหรับเซสชันนี้"
       }
     },
     {
@@ -2976,7 +3072,6 @@
         "Valid until": "有效期至",
         "Does not expire": "永不过期",
         "Unpacking in the background": "正在后台解压",
-        "files": "个文件",
         "Refresh the page in a moment to see the files.": "请稍后刷新页面以查看文件。",
         "No shared links.": "没有分享链接。",
         "Sharing stopped.": "已停止分享。",
@@ -3005,7 +3100,15 @@
         "Text preview exceeds 2 MiB limit.": "文本预览超过 2 MiB 限制。",
         "Read-only preview": "只读预览",
         "Only items directly in the Rubbish Bin can be restored.": "只能还原回收站根目录中的项目。",
-        "{count} selected": "已选择 {count} 项"
+        "{count} selected": "已选择 {count} 项",
+        "Login cookie": "登录 Cookie",
+        "Login cookie warning": "任何拥有此 Cookie 的人都可以使用你的 TeraBox 账号。请妥善保密，如已泄露请在此退出登录。",
+        "ndus (login token)": "ndus（登录令牌）",
+        "Full cookie": "完整 Cookie",
+        "Copy ndus": "复制 ndus",
+        "Copy cookie": "复制 Cookie",
+        "Copied": "已复制",
+        "No login cookie available": "此会话没有可用的登录 Cookie。"
       }
     },
     {
@@ -3286,7 +3389,6 @@
         "Valid until": "有效期限至",
         "Does not expire": "永不過期",
         "Unpacking in the background": "正在背景解壓縮",
-        "files": "個檔案",
         "Refresh the page in a moment to see the files.": "請稍候重新整理頁面以查看檔案。",
         "No shared links.": "沒有分享連結。",
         "Sharing stopped.": "已停止分享。",
@@ -3315,7 +3417,15 @@
         "Text preview exceeds 2 MiB limit.": "文字預覽超過 2 MiB 限制。",
         "Read-only preview": "唯讀預覽",
         "Only items directly in the Rubbish Bin can be restored.": "只能還原垃圾桶根目錄中的項目。",
-        "{count} selected": "已選取 {count} 項"
+        "{count} selected": "已選取 {count} 項",
+        "Login cookie": "登入 Cookie",
+        "Login cookie warning": "任何擁有此 Cookie 的人都可以使用你的 TeraBox 帳號。請妥善保密，如已外洩請在此登出。",
+        "ndus (login token)": "ndus（登入權杖）",
+        "Full cookie": "完整 Cookie",
+        "Copy ndus": "複製 ndus",
+        "Copy cookie": "複製 Cookie",
+        "Copied": "已複製",
+        "No login cookie available": "此工作階段沒有可用的登入 Cookie。"
       }
     },
     {
@@ -3467,7 +3577,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Tutup",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -3528,7 +3638,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie login",
+        "Login cookie warning": "Siapa pun yang memiliki cookie ini dapat menggunakan akun TeraBox Anda. Jaga kerahasiaannya dan keluar di sini jika bocor.",
+        "ndus (login token)": "ndus (token login)",
+        "Full cookie": "Cookie lengkap",
+        "Copy ndus": "Salin ndus",
+        "Copy cookie": "Salin cookie",
+        "Copied": "Disalin",
+        "No login cookie available": "Tidak ada cookie login untuk sesi ini."
       }
     },
     {
@@ -3662,7 +3780,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Κλείσιμο",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -3723,7 +3841,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie σύνδεσης",
+        "Login cookie warning": "Όποιος έχει αυτό το cookie μπορεί να χρησιμοποιήσει τον λογαριασμό σας TeraBox. Κρατήστε το ιδιωτικό και αποσυνδεθείτε εδώ αν διαρρεύσει.",
+        "ndus (login token)": "ndus (διακριτικό σύνδεσης)",
+        "Full cookie": "Πλήρες cookie",
+        "Copy ndus": "Αντιγραφή ndus",
+        "Copy cookie": "Αντιγραφή cookie",
+        "Copied": "Αντιγράφηκε",
+        "No login cookie available": "Δεν υπάρχει διαθέσιμο cookie σύνδεσης για αυτήν τη συνεδρία."
       }
     },
     {
@@ -3945,7 +4071,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Fechar",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -4013,7 +4139,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie de login",
+        "Login cookie warning": "Qualquer pessoa com este cookie pode usar sua conta do TeraBox. Mantenha-o privado e saia aqui se ele vazar.",
+        "ndus (login token)": "ndus (token de login)",
+        "Full cookie": "Cookie completo",
+        "Copy ndus": "Copiar ndus",
+        "Copy cookie": "Copiar cookie",
+        "Copied": "Copiado",
+        "No login cookie available": "Nenhum cookie de login disponível para esta sessão."
       }
     },
     {
@@ -4199,7 +4333,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Fechar",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -4257,7 +4391,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie de início de sessão",
+        "Login cookie warning": "Qualquer pessoa com este cookie pode usar a sua conta TeraBox. Mantenha-o privado e termine a sessão aqui se for divulgado.",
+        "ndus (login token)": "ndus (token de início de sessão)",
+        "Full cookie": "Cookie completo",
+        "Copy ndus": "Copiar ndus",
+        "Copy cookie": "Copiar cookie",
+        "Copied": "Copiado",
+        "No login cookie available": "Nenhum cookie de início de sessão disponível para esta sessão."
       }
     },
     {
@@ -4393,7 +4535,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Zamknij",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -4454,7 +4596,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Ciasteczko logowania",
+        "Login cookie warning": "Każdy, kto ma to ciasteczko, może korzystać z Twojego konta TeraBox. Zachowaj je w tajemnicy i wyloguj się tutaj, jeśli wycieknie.",
+        "ndus (login token)": "ndus (token logowania)",
+        "Full cookie": "Pełne ciasteczko",
+        "Copy ndus": "Kopiuj ndus",
+        "Copy cookie": "Kopiuj ciasteczko",
+        "Copied": "Skopiowano",
+        "No login cookie available": "Brak ciasteczka logowania dla tej sesji."
       }
     },
     {
@@ -4644,7 +4794,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Đóng",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -4704,7 +4854,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Cookie đăng nhập",
+        "Login cookie warning": "Bất kỳ ai có cookie này đều có thể dùng tài khoản TeraBox của bạn. Hãy giữ kín và đăng xuất tại đây nếu bị lộ.",
+        "ndus (login token)": "ndus (mã đăng nhập)",
+        "Full cookie": "Cookie đầy đủ",
+        "Copy ndus": "Sao chép ndus",
+        "Copy cookie": "Sao chép cookie",
+        "Copied": "Đã sao chép",
+        "No login cookie available": "Không có cookie đăng nhập cho phiên này."
       }
     },
     {
@@ -4841,7 +4999,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "סגור",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -4902,7 +5060,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "עוגיית התחברות",
+        "Login cookie warning": "כל מי שמחזיק בעוגייה זו יכול להשתמש בחשבון TeraBox שלך. שמור אותה פרטית והתנתק כאן אם היא דלפה.",
+        "ndus (login token)": "ndus (אסימון התחברות)",
+        "Full cookie": "עוגייה מלאה",
+        "Copy ndus": "העתק ndus",
+        "Copy cookie": "העתק עוגייה",
+        "Copied": "הועתק",
+        "No login cookie available": "אין עוגיית התחברות זמינה להפעלה זו."
       }
     },
     {
@@ -5048,7 +5214,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "إغلاق",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -5109,7 +5275,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "كوكي تسجيل الدخول",
+        "Login cookie warning": "يمكن لأي شخص لديه هذا الكوكي استخدام حساب TeraBox الخاص بك. أبقِه خاصًا وسجّل الخروج من هنا إذا تسرّب.",
+        "ndus (login token)": "ndus (رمز تسجيل الدخول)",
+        "Full cookie": "الكوكي الكامل",
+        "Copy ndus": "نسخ ndus",
+        "Copy cookie": "نسخ الكوكي",
+        "Copied": "تم النسخ",
+        "No login cookie available": "لا يتوفر كوكي تسجيل دخول لهذه الجلسة."
       }
     },
     {
@@ -5256,7 +5430,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Zavřít",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -5317,7 +5491,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Přihlašovací cookie",
+        "Login cookie warning": "Kdokoli s touto cookie může používat váš účet TeraBox. Udržujte ji v soukromí a pokud unikne, odhlaste se zde.",
+        "ndus (login token)": "ndus (přihlašovací token)",
+        "Full cookie": "Úplná cookie",
+        "Copy ndus": "Kopírovat ndus",
+        "Copy cookie": "Kopírovat cookie",
+        "Copied": "Zkopírováno",
+        "No login cookie available": "Pro tuto relaci není dostupná žádná přihlašovací cookie."
       }
     },
     {
@@ -5502,7 +5684,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Kapat",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -5560,7 +5742,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Giriş çerezi",
+        "Login cookie warning": "Bu çereze sahip olan herkes TeraBox hesabınızı kullanabilir. Gizli tutun ve sızarsa buradan çıkış yapın.",
+        "ndus (login token)": "ndus (giriş belirteci)",
+        "Full cookie": "Tam çerez",
+        "Copy ndus": "ndus'u kopyala",
+        "Copy cookie": "Çerezi kopyala",
+        "Copied": "Kopyalandı",
+        "No login cookie available": "Bu oturum için giriş çerezi yok."
       }
     },
     {
@@ -5698,7 +5888,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Zavrieť",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -5759,7 +5949,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Prihlasovacia cookie",
+        "Login cookie warning": "Ktokoľvek s touto cookie môže používať váš účet TeraBox. Udržujte ju v súkromí a ak unikne, odhláste sa tu.",
+        "ndus (login token)": "ndus (prihlasovací token)",
+        "Full cookie": "Úplná cookie",
+        "Copy ndus": "Kopírovať ndus",
+        "Copy cookie": "Kopírovať cookie",
+        "Copied": "Skopírované",
+        "No login cookie available": "Pre túto reláciu nie je dostupná žiadna prihlasovacia cookie."
       }
     },
     {
@@ -5895,7 +6093,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Zapri",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -5956,7 +6154,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Piškotek za prijavo",
+        "Login cookie warning": "Vsak, ki ima ta piškotek, lahko uporablja vaš račun TeraBox. Ohranite ga zasebnega in se tukaj odjavite, če pride v napačne roke.",
+        "ndus (login token)": "ndus (žeton za prijavo)",
+        "Full cookie": "Celoten piškotek",
+        "Copy ndus": "Kopiraj ndus",
+        "Copy cookie": "Kopiraj piškotek",
+        "Copied": "Kopirano",
+        "No login cookie available": "Za to sejo ni na voljo piškotka za prijavo."
       }
     },
     {
@@ -6096,7 +6302,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Sulje",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -6157,7 +6363,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Kirjautumiseväste",
+        "Login cookie warning": "Kuka tahansa, jolla on tämä eväste, voi käyttää TeraBox-tiliäsi. Pidä se yksityisenä ja kirjaudu ulos täällä, jos se vuotaa.",
+        "ndus (login token)": "ndus (kirjautumistunniste)",
+        "Full cookie": "Koko eväste",
+        "Copy ndus": "Kopioi ndus",
+        "Copy cookie": "Kopioi eväste",
+        "Copied": "Kopioitu",
+        "No login cookie available": "Tälle istunnolle ei ole kirjautumisevästettä."
       }
     },
     {
@@ -6365,7 +6579,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Stäng",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -6422,7 +6636,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Inloggningscookie",
+        "Login cookie warning": "Alla som har den här cookien kan använda ditt TeraBox-konto. Håll den privat och logga ut här om den läcker.",
+        "ndus (login token)": "ndus (inloggningstoken)",
+        "Full cookie": "Hel cookie",
+        "Copy ndus": "Kopiera ndus",
+        "Copy cookie": "Kopiera cookie",
+        "Copied": "Kopierat",
+        "No login cookie available": "Ingen inloggningscookie finns för den här sessionen."
       }
     },
     {
@@ -6646,7 +6868,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count}개 선택됨"
+        "{count} selected": "{count}개 선택됨",
+        "Login cookie": "로그인 쿠키",
+        "Login cookie warning": "이 쿠키를 가진 사람은 누구나 TeraBox 계정을 사용할 수 있습니다. 비공개로 유지하고, 유출되면 여기서 로그아웃하세요.",
+        "ndus (login token)": "ndus (로그인 토큰)",
+        "Full cookie": "전체 쿠키",
+        "Copy ndus": "ndus 복사",
+        "Copy cookie": "쿠키 복사",
+        "Copied": "복사됨",
+        "No login cookie available": "이 세션에는 사용할 수 있는 로그인 쿠키가 없습니다."
       }
     },
     {
@@ -6875,7 +7105,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} 件選択"
+        "{count} selected": "{count} 件選択",
+        "Login cookie": "ログイン Cookie",
+        "Login cookie warning": "この Cookie を持つ人は誰でも TeraBox アカウントを使用できます。非公開にし、漏洩した場合はここでサインアウトしてください。",
+        "ndus (login token)": "ndus（ログイントークン）",
+        "Full cookie": "完全な Cookie",
+        "Copy ndus": "ndus をコピー",
+        "Copy cookie": "Cookie をコピー",
+        "Copied": "コピーしました",
+        "No login cookie available": "このセッションで使用できるログイン Cookie はありません。"
       }
     },
     {
@@ -7029,7 +7267,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Хаах",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -7090,7 +7328,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Нэвтрэх cookie",
+        "Login cookie warning": "Энэ cookie-тэй хэн ч гэсэн таны TeraBox акаунтыг ашиглаж чадна. Нууцлан хадгалаад, алдагдсан бол эндээс гарна уу.",
+        "ndus (login token)": "ndus (нэвтрэх токен)",
+        "Full cookie": "Бүтэн cookie",
+        "Copy ndus": "ndus хуулах",
+        "Copy cookie": "Cookie хуулах",
+        "Copied": "Хуулагдлаа",
+        "No login cookie available": "Энэ сессэд нэвтрэх cookie байхгүй байна."
       }
     },
     {
@@ -7290,7 +7536,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Sluiten",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -7348,7 +7594,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Inlogcookie",
+        "Login cookie warning": "Iedereen met deze cookie kan je TeraBox-account gebruiken. Houd hem privé en meld je hier af als hij uitlekt.",
+        "ndus (login token)": "ndus (inlogtoken)",
+        "Full cookie": "Volledige cookie",
+        "Copy ndus": "ndus kopiëren",
+        "Copy cookie": "Cookie kopiëren",
+        "Copied": "Gekopieerd",
+        "No login cookie available": "Geen inlogcookie beschikbaar voor deze sessie."
       }
     },
     {
@@ -7534,7 +7788,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "Luk",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -7594,7 +7848,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "Login-cookie",
+        "Login cookie warning": "Alle med denne cookie kan bruge din TeraBox-konto. Hold den privat, og log ud her, hvis den lækker.",
+        "ndus (login token)": "ndus (login-token)",
+        "Full cookie": "Fuld cookie",
+        "Copy ndus": "Kopiér ndus",
+        "Copy cookie": "Kopiér cookie",
+        "Copied": "Kopieret",
+        "No login cookie available": "Ingen login-cookie tilgængelig for denne session."
       }
     },
     {
@@ -7780,7 +8042,7 @@
         "Next slide": "Next slide",
         "Visio page": "Visio page",
         "Toggle navigation": "Toggle navigation",
-        "Close": "Close",
+        "Close": "বন্ধ করুন",
         "Show password": "Show password",
         "File selection actions": "File selection actions",
         "Copy or move selected items": "Copy or move selected items",
@@ -7840,7 +8102,15 @@
         "Text preview exceeds 2 MiB limit.": "Text preview exceeds 2 MiB limit.",
         "Read-only preview": "Read-only preview",
         "Only items directly in the Rubbish Bin can be restored.": "Only items directly in the Rubbish Bin can be restored.",
-        "{count} selected": "{count} selected"
+        "{count} selected": "{count} selected",
+        "Login cookie": "লগইন কুকি",
+        "Login cookie warning": "এই কুকি যার কাছে আছে সে-ই আপনার TeraBox অ্যাকাউন্ট ব্যবহার করতে পারবে। এটি গোপন রাখুন এবং ফাঁস হলে এখান থেকে সাইন আউট করুন।",
+        "ndus (login token)": "ndus (লগইন টোকেন)",
+        "Full cookie": "সম্পূর্ণ কুকি",
+        "Copy ndus": "ndus কপি করুন",
+        "Copy cookie": "কুকি কপি করুন",
+        "Copied": "কপি হয়েছে",
+        "No login cookie available": "এই সেশনের জন্য কোনো লগইন কুকি নেই।"
       }
     }
   ]
