@@ -749,7 +749,7 @@ if (isset($_COOKIE[$mega_pref_cookie]) && strlen($_COOKIE[$mega_pref_cookie]) <=
     $decoded = json_decode($_COOKIE[$mega_pref_cookie], true);
     if (is_array($decoded)) $mega_pref_values = $decoded;
 }
-if (isset($mega_pref_values['theme']) && in_array($mega_pref_values['theme'], array('light','dark'), true)) $theme = $mega_pref_values['theme'];
+if (isset($mega_pref_values['theme']) && in_array($mega_pref_values['theme'], array('light','dark','auto'), true)) $theme = $mega_pref_values['theme'];
 if (isset($mega_pref_values['lang']) && in_array($mega_pref_values['lang'], array_keys($lang_list), true)) $lang = $mega_pref_values['lang'];
 if (isset($mega_pref_values['show_hidden']) && is_bool($mega_pref_values['show_hidden'])) $show_hidden_files = $mega_pref_values['show_hidden'];
 // Layout follows an explicit browser preference; old preferences default to Auto.
@@ -781,7 +781,11 @@ function fm_desktop_media_query() {
 define('FM_AUTO_DESKTOP', fm_browser_prefers_desktop($_SERVER));
 
 // Define the effective theme only after account-specific browser preferences.
-define('FM_THEME', $theme);
+// 'auto' follows the browser: the client script stores the detected scheme in a cookie.
+$mega_sys_theme_cookie = 'mega_fm_sys_theme';
+$mega_sys_theme = (isset($_COOKIE[$mega_sys_theme_cookie]) && $_COOKIE[$mega_sys_theme_cookie] === 'dark') ? 'dark' : 'light';
+define('FM_THEME_PREF', $theme === 'auto' ? 'auto' : ($theme === 'dark' ? 'dark' : 'light'));
+define('FM_THEME', $theme === 'auto' ? $mega_sys_theme : $theme);
 // Owner/permissions columns are not applicable to TeraBox; keep hidden.
 if (isset($mega_pref_values['hide_Cols']) && is_bool($mega_pref_values['hide_Cols'])) $hide_Cols = true;
 // Error reporting remains a server administrator setting.
@@ -3004,6 +3008,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                                                         } ?>>
                                     <?php echo lng('dark') ?>
                                 </option>
+                                <option value='auto' <?php if ($theme == "auto") { echo "selected"; } ?>><?php echo lng('Auto (browser detection)') ?></option>
                             </select>
                         </div>
                     </div>
@@ -6808,8 +6813,8 @@ window.megaShowNotice = window.megaNotify;
                 var stored = localStorage.getItem(window.megaPrefsStorageKey);
                 if (stored && !document.cookie.split('; ').some(function (part) { return part.indexOf(window.megaPrefsCookieName + '=') === 0; })) {
                     var p = JSON.parse(stored);
-                    if (p && (p.theme === 'light' || p.theme === 'dark') && typeof p.show_hidden === 'boolean') {
-                        document.documentElement.setAttribute('data-bs-theme', p.theme);
+                    if (p && (p.theme === 'light' || p.theme === 'dark' || p.theme === 'auto') && typeof p.show_hidden === 'boolean') {
+                        if (p.theme !== 'auto') document.documentElement.setAttribute('data-bs-theme', p.theme);
                         document.cookie = window.megaPrefsCookieName + '=' + encodeURIComponent(JSON.stringify(p)) +
                             '; path=' + window.megaPrefsCookiePath + '; max-age=31536000; SameSite=Lax' +
                             (location.protocol === 'https:' ? '; Secure' : '');
@@ -6820,6 +6825,31 @@ window.megaShowNotice = window.megaNotify;
                     }
                 } else sessionStorage.removeItem('mega_prefs_restored');
             } catch (e) { /* Browser storage can be disabled. */ }
+        }());
+        // Theme "Auto": follow the browser/OS colour scheme (PHP renders it from a cookie set here).
+        (function () {
+            if (<?php echo json_encode(FM_THEME_PREF); ?> !== 'auto' || !window.matchMedia) return;
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            var rendered = <?php echo json_encode(FM_THEME); ?>;
+            function setCookie(v) {
+                document.cookie = 'mega_fm_sys_theme=' + v + '; path=' + window.megaPrefsCookiePath +
+                    '; max-age=31536000; SameSite=Lax' + (location.protocol === 'https:' ? '; Secure' : '');
+            }
+            function apply(reload) {
+                var v = mq.matches ? 'dark' : 'light';
+                setCookie(v);
+                if (v !== rendered) {
+                    document.documentElement.setAttribute('data-bs-theme', v);
+                    var key = 'mega_theme_reloaded_' + v;
+                    if (reload && !sessionStorage.getItem(key)) { sessionStorage.setItem(key, '1'); location.reload(); }
+                } else {
+                    sessionStorage.removeItem('mega_theme_reloaded_dark');
+                    sessionStorage.removeItem('mega_theme_reloaded_light');
+                }
+            }
+            try { apply(true); } catch (e) {}
+            var h = function () { try { sessionStorage.removeItem('mega_theme_reloaded_dark'); sessionStorage.removeItem('mega_theme_reloaded_light'); apply(true); } catch (e) {} };
+            if (mq.addEventListener) mq.addEventListener('change', h); else if (mq.addListener) mq.addListener(h);
         }());
         </script>
         <meta charset="utf-8">
@@ -8676,7 +8706,7 @@ html body .fm-path-links .mega-desktop-parent .fa{font-size:1.15em!important;lin
                         show_hidden: document.getElementById('js-show-hidden').checked,
                         hide_Cols: true
                     };
-                    if (prefs.theme !== 'dark' && prefs.theme !== 'light') throw new Error(<?php echo json_encode(lng('Invalid theme')); ?>);
+                    if (prefs.theme !== 'dark' && prefs.theme !== 'light' && prefs.theme !== 'auto') throw new Error(<?php echo json_encode(lng('Invalid theme')); ?>);
                     if (['auto', 'mobile', 'desktop'].indexOf(prefs.view_mode) < 0) throw new Error('Invalid layout');
                     window.localStorage.setItem(window.megaPrefsStorageKey, JSON.stringify(prefs));
                     document.cookie = window.megaPrefsCookieName + '=' + encodeURIComponent(JSON.stringify(prefs)) +
