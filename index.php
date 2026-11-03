@@ -3038,6 +3038,63 @@ if (isset($_GET['settings']) && !FM_READONLY) {
     exit;
 }
 
+if (isset($_GET['login_cookie'])) {
+    fm_show_header(); // HEADER
+    fm_show_nav_path(FM_PATH); // current path
+    $lcNdus = (string)($_SESSION['ndus'] ?? '');
+    $lcFull = (string)($_SESSION['cookie'] ?? '');
+    if ($lcFull === '' && $lcNdus !== '') $lcFull = 'lang=en; ndus=' . $lcNdus;
+    if ($lcNdus === '' && $lcFull !== '' && preg_match('/(?:^|;\s*)ndus=([^;]*)/', $lcFull, $lcM)) $lcNdus = $lcM[1];
+    $lcBack = '?p=' . urlencode(FM_PATH);
+?>
+    <style>
+        .mega-lc-panel .mega-lc-label { font-size: .85rem; opacity: .7; margin: .9rem 0 .25rem; }
+        .mega-lc-panel .mega-lc-value { font-family: monospace; font-size: .9rem; word-break: break-all; white-space: pre-wrap; user-select: all; margin: 0; padding: .5rem .6rem; border: 1px solid var(--bs-border-color, rgba(128,128,128,.4)); border-radius: .375rem; background: var(--bs-tertiary-bg, rgba(128,128,128,.08)); color: inherit; }
+        .mega-lc-panel .mega-lc-actions { display: flex; flex-wrap: nowrap; justify-content: center; gap: .5rem; margin-top: 1.1rem; }
+        .mega-lc-panel .mega-lc-actions .btn { flex: 0 0 auto; white-space: nowrap; }
+        @media (max-width: 575.98px) { .mega-lc-panel .mega-lc-actions { gap: .4rem; } .mega-lc-panel .mega-lc-actions .btn { flex: 1 1 0; min-width: 0; font-size: .8rem; padding-left: .25rem; padding-right: .25rem; overflow: hidden; text-overflow: ellipsis; } }
+        .mega-lc-panel .mega-lc-actions .btn .fa { margin-right: .3rem; }
+    </style>
+    <div class="col-md-8 offset-md-2 pt-3 mega-lc-panel fm-form-panel-shell" data-bs-theme="<?php echo FM_THEME; ?>">
+        <div class="card mb-2 fm-form-panel" data-bs-theme="<?php echo FM_THEME; ?>">
+            <h6 class="card-header d-flex justify-content-between">
+                <span><i class="fa fa-key" aria-hidden="true"></i> <?php echo lng('Login cookie') ?></span>
+            </h6>
+            <div class="card-body">
+                <?php if ($lcNdus === '' && $lcFull === ''): ?>
+                    <p class="mb-0"><?php echo lng('No login cookie available'); ?></p>
+                <?php else: ?>
+                    <p class="mb-0"><?php echo lng('Login cookie warning'); ?></p>
+                    <div class="mega-lc-label"><?php echo lng('ndus (login token)'); ?></div>
+                    <pre class="mega-lc-value" id="mega-lc-ndus"><?php echo e($lcNdus); ?></pre>
+                    <div class="mega-lc-label"><?php echo lng('Full cookie'); ?></div>
+                    <pre class="mega-lc-value" id="mega-lc-full"><?php echo e($lcFull); ?></pre>
+                <?php endif; ?>
+                <div class="mega-lc-actions">
+                    <a href="<?php echo $lcBack; ?>" class="btn btn-outline-secondary"><i class="fa fa-times" aria-hidden="true"></i> <?php echo lng('Close'); ?></a>
+                    <?php if ($lcNdus !== ''): ?><button type="button" class="btn btn-primary" data-lc-copy="mega-lc-ndus"><i class="fa fa-clipboard" aria-hidden="true"></i> <?php echo lng('Copy ndus'); ?></button><?php endif; ?>
+                    <?php if ($lcFull !== ''): ?><button type="button" class="btn btn-primary" data-lc-copy="mega-lc-full"><i class="fa fa-clipboard" aria-hidden="true"></i> <?php echo lng('Copy cookie'); ?></button><?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    (function(){
+      function fallback(t){var a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a)}
+      document.querySelectorAll('[data-lc-copy]').forEach(function(b){
+        b.addEventListener('click',function(){
+          var t=document.getElementById(b.getAttribute('data-lc-copy')).textContent,old=b.innerHTML;
+          function done(){b.innerHTML='<i class="fa fa-check" aria-hidden="true"></i> '+<?php echo json_encode(lng('Copied')); ?>;setTimeout(function(){b.innerHTML=old},1500)}
+          if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(t).then(done,function(){fallback(t);done()})}else{fallback(t);done()}
+        });
+      });
+    })();
+    </script>
+<?php
+    fm_show_footer();
+    exit;
+}
+
 if (isset($_GET['help'])) {
     fm_show_header(); // HEADER
     fm_show_nav_path(FM_PATH); // current path
@@ -6105,6 +6162,7 @@ function fm_show_nav_path($path)
                                     <a title="<?php echo lng('Settings') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;settings=1"><i class="fa fa-cog" aria-hidden="true"></i> <?php echo lng('Settings') ?></a>
                                 <?php endif ?>
                                 <a title="<?php echo lng('Help') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;help=2"><i class="fa fa-exclamation-circle" aria-hidden="true"></i> <?php echo lng('Help') ?></a>
+                                <a title="<?php echo lng('Login cookie') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;login_cookie=1"><i class="fa fa-key" aria-hidden="true"></i> <?php echo lng('Login cookie') ?></a>
                                 <a title="<?php echo lng('Logout') ?>" class="dropdown-item nav-link" href="?logout=1"><i class="fa fa-sign-out" aria-hidden="true"></i> <?php echo lng('Logout') ?></a>
                             </div>
                         </li>
@@ -6114,6 +6172,7 @@ function fm_show_nav_path($path)
                                 <a title="<?php echo lng('Settings') ?>" class="dropdown-item nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;settings=1"><i class="fa fa-cog" aria-hidden="true"></i> <?php echo lng('Settings') ?></a>
                             </li>
                         <?php endif; ?>
+                        <li class="nav-item"><a title="<?php echo lng('Login cookie') ?>" class="nav-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;login_cookie=1"><i class="fa fa-key" aria-hidden="true"></i> <?php echo lng('Login cookie') ?></a></li>
                         <li class="nav-item">
  <form method="post" action="logout.php" class="d-inline m-0"><input type="hidden" name="csrf" value="<?php echo e(csrf_token()); ?>"><button type="submit" title="<?php echo lng('Logout') ?>" class="nav-link btn btn-link" style="border:0;background:none"><i class="fa fa-sign-out" aria-hidden="true"></i> <?php echo lng('Logout') ?></button></form>
                         </li>
@@ -6213,6 +6272,7 @@ function fm_show_nav_path($path)
         <?php if (true): ?><a href="?tb_recycle=1&amp;p="><i class="fa fa-trash-o" aria-hidden="true"></i> <?php echo lng('Rubbish Bin'); ?></a><?php endif; ?>
         <?php if (true): ?><a href="?mega_shared_links=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>"><i class="fa fa-link" aria-hidden="true"></i> <?php echo lng('Shared Links'); ?></a><?php endif; ?>
         <?php if (!FM_READONLY): ?><a href="?p=<?php echo urlencode(FM_PATH); ?>&amp;settings=1"><i class="fa fa-cog"></i> <?php echo lng('Settings'); ?></a><?php endif; ?>
+        <a href="?p=<?php echo urlencode(FM_PATH); ?>&amp;login_cookie=1"><i class="fa fa-key"></i> <?php echo lng('Login cookie'); ?></a>
         <form method="post" action="logout.php" style="display:contents"><input type="hidden" name="csrf" value="<?php echo e(csrf_token()); ?>"><a href="?logout=1" onclick="this.parentNode.submit();return false;"><i class="fa fa-sign-out"></i> <?php echo lng('Logout'); ?></a></form>
       </div>
     </div>
@@ -10369,6 +10429,14 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 // New entries, which deserve to be translated
         $tr['en']['Author']             = 'Author';
         $tr['en']['Mail Us']            = 'Mail Us';
+        $tr['en']['Login cookie'] = 'Login cookie';
+        $tr['en']['Login cookie warning'] = 'Anyone with this cookie can use your TeraBox account. Keep it private and sign out here if it leaks.';
+        $tr['en']['ndus (login token)'] = 'ndus (login token)';
+        $tr['en']['Full cookie'] = 'Full cookie';
+        $tr['en']['Copy ndus'] = 'Copy ndus';
+        $tr['en']['Copy cookie'] = 'Copy cookie';
+        $tr['en']['Copied'] = 'Copied';
+        $tr['en']['No login cookie available'] = 'No login cookie is available for this session.';
 
         $i18n = fm_get_translations($tr);
         $tr = $i18n ? $i18n : $tr;
