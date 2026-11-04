@@ -1685,6 +1685,26 @@ if (isset($_GET['dl'], $_POST['token'])) {
     }
 }
 
+// Folder upload: tell the client which relative paths already exist (they are skipped).
+if (isset($_POST['check_exists'], $_POST['paths']) && !FM_READONLY) {
+    header('Content-Type: application/json');
+    if (!isset($_POST['token']) || !verifyToken($_POST['token'])) {
+        echo json_encode(array('status' => 'error', 'info' => lng('Invalid Token.')));
+        exit();
+    }
+    $ceList = json_decode((string)$_POST['paths'], true);
+    $ceBase = FM_ROOT_PATH . (FM_PATH != '' ? '/' . FM_PATH : '');
+    $ceExisting = array();
+    if (is_array($ceList)) {
+        foreach (array_slice($ceList, 0, 200) as $cePath) {
+            $ceClean = fm_clean_path((string)$cePath);
+            if ($ceClean !== '' && file_exists($ceBase . '/' . $ceClean)) $ceExisting[] = (string)$cePath;
+        }
+    }
+    echo json_encode(array('status' => 'ok', 'existing' => $ceExisting));
+    exit();
+}
+
 // Upload
 if (!empty($_FILES) && !FM_READONLY) {
     if (isset($_POST['token'])) {
@@ -1699,8 +1719,8 @@ if (!empty($_FILES) && !FM_READONLY) {
         exit();
     }
 
-    $chunkIndex = $_POST['dzchunkindex'];
-    $chunkTotal = $_POST['dztotalchunkcount'];
+    $chunkIndex = isset($_POST['dzchunkindex']) ? $_POST['dzchunkindex'] : 0;
+    $chunkTotal = isset($_POST['dztotalchunkcount']) ? $_POST['dztotalchunkcount'] : 0;
     $fullPathInput = fm_clean_path($_REQUEST['fullpath']);
 
     $f = $_FILES;
@@ -1736,6 +1756,13 @@ if (!empty($_FILES) && !FM_READONLY) {
     if (is_writable($targetPath)) {
         $fullPath = $path . '/' . $fullPathInput;
         $folder = substr($fullPath, 0, strrpos($fullPath, "/"));
+
+        // Folder uploads merge into existing folders and skip files that already exist.
+        if (strpos($fullPathInput, '/') !== false && file_exists($fullPath)) {
+            @unlink($tmp_name);
+            echo json_encode(array('status' => 'success', 'info' => 'skipped', 'skipped' => true));
+            exit();
+        }
 
         if (!is_dir($folder)) {
             $old = umask(0);
@@ -1798,9 +1825,11 @@ if (!empty($_FILES) && !FM_READONLY) {
                     }
                     rename("{$fullPath}.part", $fullPathTarget);
                 }
-            } else if (tb_move_uploaded($tmp_name, $fullPath)) {
-                // Be sure that the file has been uploaded
-                if (file_exists($fullPath)) {
+            } else if (tb_move_uploaded($tmp_name, $fullPathSingle = (file_exists($fullPath)
+                    ? $path . '/' . basename($fullPathInput, $ext ? '.' . $ext : '') . '_' . date('ymdHis') . ($ext ? '.' . $ext : '')
+                    : $fullPath))) {
+                // Single-request upload (empty files are sent this way). Be sure that the file has been uploaded
+                if (file_exists($fullPathSingle)) {
                     $response = array(
                         'status'    => 'success',
                         'info' => "file upload successful"
@@ -2448,6 +2477,18 @@ if (isset($_GET['upload']) && !FM_READONLY) {
     }
     ?>
     <?php print_external('css-dropzone'); ?>
+    <style>
+        html body #wrapper .fm-upload-wrapper .card-header-tabs { display: flex; flex-wrap: nowrap; gap: 4px; margin-left: 0; margin-right: 0; }
+        html body #wrapper .fm-upload-wrapper .card-header-tabs .nav-item { flex: 1 1 0; min-width: 0; margin: 0; }
+        html body #wrapper .fm-upload-wrapper .card-header-tabs .nav-link { display: flex; align-items: center; justify-content: center; gap: 6px; height: 100%; padding: .5rem .4rem; text-align: center; white-space: nowrap; }
+        @media (max-width: 575.98px) {
+            html body #wrapper .fm-upload-wrapper .card-header-tabs .nav-link { flex-direction: column; gap: 2px; padding: .45rem .2rem; font-size: .78rem; line-height: 1.2; white-space: normal; overflow-wrap: anywhere; }
+            html body #wrapper .fm-upload-wrapper .card-header-tabs .nav-link .fa { font-size: 1.1rem; }
+        }
+        .dropzone .dz-preview.dz-skipped { opacity: .65; }
+        .dropzone .dz-preview.dz-skipped .dz-error-mark { display: none; }
+        .dropzone .dz-preview.dz-skipped .dz-error-message { background: #6c757d; }
+    </style>
     <div class="path fm-upload-page-path">
         <div id="megaUrlUploadResultHost" class="mega-url-result-host" aria-live="polite"></div>
 
@@ -2456,6 +2497,9 @@ if (isset($_GET['upload']) && !FM_READONLY) {
                 <ul class="nav nav-tabs card-header-tabs">
                     <li class="nav-item">
                         <a class="nav-link active" href="#fileUploader" data-target="#fileUploader"><i class="fa fa-arrow-circle-o-up"></i> <?php echo lng('UploadingFiles') ?></a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#folderUploader" data-target="#folderUploader"><i class="fa fa-folder-open"></i> <?php echo lng('Upload folder') ?></a>
                     </li>
                     <li class="nav-item">
                         <a class="nav-link" href="#urlUploader" class="js-url-upload" data-target="#urlUploader"><i class="fa fa-link"></i> <?php echo lng('Upload from URL') ?></a>
@@ -2472,6 +2516,11 @@ if (isset($_GET['upload']) && !FM_READONLY) {
                     <div class="fallback">
                         <input name="file" type="file" multiple />
                     </div>
+                </form>
+                <form action="<?php echo htmlspecialchars(FM_SELF_URL) . '?p=' . fm_enc(FM_PATH) ?>" class="dropzone card-tabs-container hidden" id="folderUploader" enctype="multipart/form-data">
+                    <input type="hidden" name="p" value="<?php echo fm_enc(FM_PATH) ?>">
+                    <input type="hidden" name="fullpath" value="<?php echo fm_enc(FM_PATH) ?>">
+                    <input type="hidden" name="token" value="<?php echo $_SESSION['token']; ?>">
                 </form>
                 <div class="fm-file-upload-actions fm-unified-actions">
                     <a href="?p=<?php echo urlencode(FM_PATH) ?>" class="btn btn-outline-secondary fm-unified-button"><i class="fa fa-times" aria-hidden="true"></i> <?php echo lng('Cancel'); ?></a>
@@ -2499,8 +2548,11 @@ if (isset($_GET['upload']) && !FM_READONLY) {
     </div>
     <?php print_external('js-dropzone'); ?>
     <script>
-        Dropzone.options.fileUploader = {
-            dictDefaultMessage: <?php echo json_encode(html_entity_decode(lng('Drop files here to upload'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
+        function fmDzOptions(isFolder) {
+            return {
+            dictDefaultMessage: isFolder
+                ? <?php echo json_encode(html_entity_decode(lng('Drop folder here to upload'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>
+                : <?php echo json_encode(html_entity_decode(lng('Drop files here to upload'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>,
             chunking: true,
             chunkSize: <?php echo UPLOAD_CHUNK_SIZE; ?>,
             forceChunking: true,
@@ -2511,10 +2563,69 @@ if (isset($_GET['upload']) && !FM_READONLY) {
             timeout: 120000,
             maxFilesize: "<?php echo MAX_UPLOAD_SIZE; ?>",
             acceptedFiles: "<?php echo getUploadExt() ?>",
+            accept: function(file, done) {
+                // Files inside folders: ask the server (in batches) which ones already exist and skip them.
+                var dz = this, rel = file.fullPath || '';
+                if (rel.indexOf('/') < 0) return done();
+                dz.fmSkipQueue = dz.fmSkipQueue || [];
+                dz.fmSkipQueue.push({ file: file, rel: rel, done: done });
+                clearTimeout(dz.fmSkipTimer);
+                dz.fmSkipTimer = setTimeout(dz.fmFlushSkipQueue, 60);
+            },
             init: function() {
-                this.on("sending", function(file, xhr, formData) {
+                var dz = this;
+                var form = dz.element;
+                // Dropzone cannot chunk an empty (0-byte) file: it would send nothing and never finish.
+                // Send empty files in a single request instead.
+                var origUploadFiles = dz.uploadFiles;
+                dz.uploadFiles = function(files) {
+                    if (files && files[0] && files[0].size === 0) {
+                        var savedChunking = dz.options.chunking;
+                        dz.options.chunking = false;
+                        try { return origUploadFiles.call(dz, files); } finally { dz.options.chunking = savedChunking; }
+                    }
+                    return origUploadFiles.call(dz, files);
+                };
+                var skipMsg = <?php echo json_encode(html_entity_decode(lng('Already exists, skipped'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;
+                dz.fmFlushSkipQueue = function() {
+                    var batch = (dz.fmSkipQueue || []).splice(0, 200);
+                    if (!batch.length) return;
+                    if (dz.fmSkipQueue.length) dz.fmSkipTimer = setTimeout(dz.fmFlushSkipQueue, 0);
+                    var fd = new FormData();
+                    fd.append('token', form.querySelector('[name=token]').value);
+                    fd.append('check_exists', '1');
+                    fd.append('paths', JSON.stringify(batch.map(function(b) { return b.rel; })));
+                    fetch(form.getAttribute('action'), { method: 'POST', body: fd, credentials: 'same-origin' })
+                        .then(function(r) { return r.json(); })
+                        .then(function(j) { return (j && j.existing) ? j.existing : []; })
+                        .catch(function() { return []; })
+                        .then(function(existing) {
+                            var set = {};
+                            existing.forEach(function(x) { set[x] = true; });
+                            batch.forEach(function(b) {
+                                if (set[b.rel]) { b.file.fmSkipped = true; b.done(skipMsg); } else b.done();
+                            });
+                        });
+                };
+                if (isFolder) {
+                    // Make the click-to-choose dialog a folder picker (Dropzone recreates its input after every selection).
+                    var makeDirInput = function() {
+                        if (dz.hiddenFileInput) {
+                            dz.hiddenFileInput.setAttribute('webkitdirectory', '');
+                            dz.hiddenFileInput.setAttribute('directory', '');
+                        }
+                    };
+                    makeDirInput();
+                    setTimeout(makeDirInput, 0);
+                    dz.on('addedfiles', function() { setTimeout(makeDirInput, 0); });
+                }
+                dz.on("addedfile", function(file) {
+                    // Folder picker: keep the relative path (Dropzone only does this for dropped folders).
+                    if (!file.fullPath && file.webkitRelativePath) file.fullPath = file.webkitRelativePath;
+                });
+                dz.on("sending", function(file, xhr, formData) {
                     let _path = (file.fullPath) ? file.fullPath : file.name;
-                    document.getElementById("fullpath").value = _path;
+                    form.querySelector('[name=fullpath]').value = _path;
                     xhr.ontimeout = (function() {
                         toast('Error: Server Timeout');
                     });
@@ -2529,10 +2640,17 @@ if (isset($_GET['upload']) && !FM_READONLY) {
                         toast("Error: Invalid JSON response");
                     }
                 }).on("error", function(file, response) {
+                    if (file.fmSkipped) {
+                        if (file.previewElement) file.previewElement.classList.add('dz-skipped');
+                        return;
+                    }
                     toast(response);
                 });
             }
+            };
         }
+        Dropzone.options.fileUploader = fmDzOptions(false);
+        Dropzone.options.folderUploader = fmDzOptions(true);
     </script>
 <?php
     fm_show_footer();
@@ -2716,8 +2834,8 @@ if (isset($_POST['copy']) && !FM_READONLY) {
                       <details class="mega-copy-v43-advanced"><summary><?php echo lng('DestinationFolder'); ?> · <?php echo lng('Edit'); ?></summary><div id="mega-copy-v43-manual"></div></details>
                       <div class="mega-copy-v43-actions">
                         <a href="?p=<?php echo urlencode(FM_PATH); ?>" id="mega-copy-v100-cancel" class="btn btn-outline-secondary mega-copy-v43-cancel"><i class="fa fa-times" aria-hidden="true"></i> <?php echo lng('Cancel'); ?></a>
-                        <button type="button" id="mega-copy-v43-move" class="btn btn-success"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10h8"/><path d="m16 6 4 4-4 4"/><path d="M20 10V5a2 2 0 0 0-2-2H8l-2 3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/></svg> <?php echo lng('Move'); ?></button>
                         <button type="button" id="mega-copy-v43-copy" class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="13" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg> <?php echo lng('Copy'); ?></button>
+                        <button type="button" id="mega-copy-v43-move" class="btn btn-success"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 10h8"/><path d="m16 6 4 4-4 4"/><path d="M20 10V5a2 2 0 0 0-2-2H8l-2 3H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-3"/></svg> <?php echo lng('Move'); ?></button>
                       </div>
                     </section>
                     <style id="mega-copy-v43-style">
@@ -2883,8 +3001,8 @@ if (isset($_POST['copy']) && !FM_READONLY) {
                     </script>
                     <div class="d-flex flex-wrap align-items-center gap-2 mt-3" role="group" aria-label="<?php echo lng('Copy or move selected items') ?>">
                         <input type="hidden" name="token" value="<?php echo $_SESSION['token']; ?>">
-                        <button type="submit" class="btn btn-success"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Copy') ?></button>
-                        <button type="submit" name="move" value="1" class="btn btn-primary"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Move') ?></button>
+                        <button type="submit" class="btn btn-primary"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Copy') ?></button>
+                        <button type="submit" name="move" value="1" class="btn btn-success"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Move') ?></button>
                     </div>
                 </form>
             </div>
@@ -2916,8 +3034,8 @@ if (isset($_GET['copy']) && !isset($_GET['finish']) && !FM_READONLY) {
         </p>
         <div class="d-flex flex-wrap align-items-center gap-2 my-3">
             <a class="btn btn-outline-secondary" href="?p=<?php echo urlencode(FM_PATH) ?>"><i class="fa fa-times" aria-hidden="true"></i> <?php echo lng('Cancel') ?></a>
-            <a class="btn btn-success" id="mega-picker-copy-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode($copy) ?>&amp;finish=1"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Copy') ?></a>
-            <a class="btn btn-primary" id="mega-picker-move-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode($copy) ?>&amp;finish=1&amp;move=1"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Move') ?></a>
+            <a class="btn btn-primary" id="mega-picker-copy-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode($copy) ?>&amp;finish=1"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Copy') ?></a>
+            <a class="btn btn-success" id="mega-picker-move-link" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode($copy) ?>&amp;finish=1&amp;move=1"><i class="fa fa-check" aria-hidden="true"></i> <?php echo lng('Move') ?></a>
         </div>
         <?php fm_mega_folder_picker_ui(FM_PATH, 'single', $copy); ?>
     </div>
@@ -4010,7 +4128,7 @@ $all_files_size = 0;
                     <td class="inline-actions"><?php if (!FM_READONLY): ?>
                             <a title="<?php echo lng('Delete') ?>" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;del=<?php echo urlencode($f) ?>" onclick="confirmDialog(event, '1028','<?php echo lng('Delete') . ' ' . lng('Folder'); ?>','<?php echo urlencode($f) ?>', this.href);"> <i class="fa fa-trash-o" aria-hidden="true"></i></a>
                             <a title="<?php echo lng('Rename') ?>" href="#" onclick="rename('<?php echo fm_enc(addslashes(FM_PATH)) ?>', '<?php echo fm_enc(addslashes($f)) ?>');return false;"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
-                            <a title="<?php echo lng('CopyTo') ?>..." href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o" aria-hidden="true"></i></a>
+                            <a title="<?php echo lng('CopyMove') ?>" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o" aria-hidden="true"></i></a>
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -4086,7 +4204,7 @@ $all_files_size = 0;
                         <?php if (!FM_READONLY): ?>
                             <a title="<?php echo lng('Delete') ?>" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;del=<?php echo urlencode($f) ?>" onclick="confirmDialog(event, 1209, '<?php echo lng('Delete') . ' ' . lng('File'); ?>','<?php echo urlencode($f); ?>', this.href);"> <i class="fa fa-trash-o"></i></a>
                             <a title="<?php echo lng('Rename') ?>" href="#" onclick="rename('<?php echo fm_enc(addslashes(FM_PATH)) ?>', '<?php echo fm_enc(addslashes($f)) ?>');return false;"><i class="fa fa-pencil-square-o"></i></a>
-                            <a title="<?php echo lng('CopyTo') ?>..."
+                            <a title="<?php echo lng('CopyMove') ?>"
                                 href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o"></i></a>
                         <?php endif; ?>
                         <?php if (true): ?><a title="<?php echo lng('Create Link'); ?>" aria-label="<?php echo lng('Create Link'); ?>" href="?mega_link=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>&amp;file=<?php echo rawurlencode($f); ?>"><i class="fa fa-link" aria-hidden="true"></i></a><?php endif; ?>
@@ -7384,7 +7502,7 @@ window.megaShowNotice = window.megaNotify;
             /* Upload header: Back stays in its own row, never overlaps Dropzone. */
             .fm-upload-destination { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; min-height:44px; margin-bottom:18px; }
             .fm-upload-destination .fm-upload-back { order:2; margin-left:auto; flex-shrink:0; float:none !important; }
-            #fileUploader { clear:both; margin-top:0; }
+            #fileUploader, #folderUploader { clear:both; margin-top:0; }
             /* URL form: full-width input, centered action. */
             .fm-url-upload-form { display:flex; flex-direction:column; align-items:stretch; gap:16px; width:100%; max-width:100%; }
             .fm-url-upload-form .fm-url-input { display:block; width:100% !important; max-width:100%; box-sizing:border-box; }
@@ -9042,7 +9160,7 @@ html body .fm-path-links .mega-desktop-parent .fa{font-size:1.15em!important;lin
                     $(target).removeClass('hidden');
                     // File-upload cancel belongs only to the file upload tab.
                     // URL upload already has its own Cancel / Upload action row.
-                    $(".fm-file-upload-actions").toggleClass('hidden', target !== '#fileUploader');
+                    $(".fm-file-upload-actions").toggleClass('hidden', target !== '#fileUploader' && target !== '#folderUploader');
                 });
             });
         </script>
@@ -10291,6 +10409,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         $tr['en']['Delete']         = 'Delete';
         $tr['en']['Rename']         = 'Rename';
         $tr['en']['CopyTo']         = 'Copy to';
+        $tr['en']['CopyMove']       = 'Copy/Move';
         $tr['en']['UploadingFiles'] = 'Upload Files';
         $tr['en']['ChangePermissions']  = 'Change Permissions';
         $tr['en']['Copying']        = 'Copying';
@@ -10434,6 +10553,9 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         $tr['en'][' of '] = ' of ';
         $tr['en']['Server administrator setting (not saved in browser).'] = 'Server administrator setting (not saved in browser).';
         $tr['en']['Drop files here to upload'] = 'Drop files here to upload';
+        $tr['en']['Upload folder'] = 'Upload folder';
+        $tr['en']['Drop folder here to upload'] = 'Drop a folder here or tap to choose one';
+        $tr['en']['Already exists, skipped'] = 'Already exists, skipped';
         $tr['en']['Please fill out this field.'] = 'Please fill out this field.';
         $tr['en']['Archive'] = 'Archive';
         $tr['en']['Full Path'] = 'Full Path';
