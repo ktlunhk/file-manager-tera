@@ -1649,6 +1649,52 @@ if (isset($_GET['mega_vsdx']) && strpos(FM_ROOT_PATH, 'terabox://') === 0) {
 }
 
 // Download
+// Download a whole folder as a ZIP. TeraBox folders are copied into a temporary LOCAL folder first
+// (same limits as ZIP creation: 1000 items, 20 levels, 256 MiB), zipped, streamed, then removed.
+if (isset($_GET['dlfolder'], $_POST['token'])) {
+    if (!verifyToken($_POST['token'])) {
+        fm_set_msg(lng('Invalid Token.'), 'error');
+        exit;
+    }
+    $dfName = (string)$_GET['dlfolder'];
+    $dfBase = rtrim(FM_ROOT_PATH, '/') . (FM_PATH !== '' ? '/' . FM_PATH : '');
+    $dfError = '';
+    if ($dfName === '' || $dfName === '.' || $dfName === '..' || basename($dfName) !== $dfName ||
+        strpbrk($dfName, "/\\\0") !== false) {
+        $dfError = lng('Invalid file');
+    } elseif (!is_dir($dfBase . '/' . $dfName)) {
+        $dfError = lng('Folder not found');
+    } elseif (!class_exists('ZipArchive')) {
+        $dfError = lng('Operations with archives are not available');
+    } else {
+        @set_time_limit(0);
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();   // do not hold the session lock while staging
+        $dfStage = sys_get_temp_dir() . '/mega_dlfolder_' . bin2hex(random_bytes(12));
+        if (!@mkdir($dfStage, 0700)) {
+            $dfError = 'Cannot create temporary directory';
+        } else {
+            register_shutdown_function('mega_archive_remove_temp', $dfStage);   // also runs if the browser disconnects
+            try {
+                $dfCount = 0; $dfBytes = 0;
+                mega_archive_stage_item($dfBase . '/' . $dfName, $dfStage . '/' . $dfName, $dfCount, $dfBytes, 0);
+                $dfZip = $dfStage . '/result.zip';
+                $dfArchive = new ZipArchive();
+                if ($dfArchive->open($dfZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException('Cannot initialize ZIP archive');
+                $dfOk = mega_archive_add_zip($dfArchive, $dfStage . '/' . $dfName, $dfName);
+                $dfClosed = $dfArchive->close();
+                if (!$dfOk || !$dfClosed || !is_file($dfZip)) throw new RuntimeException('Failed to write ZIP archive');
+                fm_download_file($dfZip, $dfName . '.zip', 1024);
+                exit;
+            } catch (Throwable $e) {
+                $dfError = $e->getMessage();
+                error_log('TeraBox folder download failed: ' . $dfError);
+            }
+        }
+    }
+    fm_set_msg(lng('Download failed') . ($dfError !== '' ? ': ' . $dfError : ''), 'error');
+    fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
+}
+
 if (isset($_GET['dl'], $_POST['token'])) {
     // Verify the token to ensure it's valid
     if (!verifyToken($_POST['token'])) {
@@ -4130,6 +4176,7 @@ $all_files_size = 0;
                             <a title="<?php echo lng('Rename') ?>" href="#" onclick="rename('<?php echo fm_enc(addslashes(FM_PATH)) ?>', '<?php echo fm_enc(addslashes($f)) ?>');return false;"><i class="fa fa-pencil-square-o" aria-hidden="true"></i></a>
                             <a title="<?php echo lng('CopyMove') ?>" href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o" aria-hidden="true"></i></a>
                         <?php endif; ?>
+                        <button type="button" data-mega-download-url="?p=<?php echo urlencode(FM_PATH) ?>&amp;dlfolder=<?php echo urlencode($f) ?>" title="<?php echo lng('Download') ?>" aria-label="<?php echo lng('Download') ?>" class="mega-download-action mega-download-direct"><i class="fa fa-download"></i></button>
                     </td>
                 </tr>
             <?php
@@ -4207,8 +4254,8 @@ $all_files_size = 0;
                             <a title="<?php echo lng('CopyMove') ?>"
                                 href="?p=<?php echo urlencode(FM_PATH) ?>&amp;copy=<?php echo urlencode(trim(FM_PATH . '/' . $f, '/')) ?>"><i class="fa fa-files-o"></i></a>
                         <?php endif; ?>
-                        <?php if (true): ?><a title="<?php echo lng('Create Link'); ?>" aria-label="<?php echo lng('Create Link'); ?>" href="?mega_link=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>&amp;file=<?php echo rawurlencode($f); ?>"><i class="fa fa-link" aria-hidden="true"></i></a><?php endif; ?>
                         <button type="button" data-mega-download-url="?p=<?php echo urlencode(FM_PATH) ?>&amp;dl=<?php echo urlencode($f) ?>" title="<?php echo lng('Download') ?>" aria-label="<?php echo lng('Download') ?>" class="mega-download-action mega-download-direct"><i class="fa fa-download"></i></button>
+                        <?php if (true): ?><a title="<?php echo lng('Create Link'); ?>" aria-label="<?php echo lng('Create Link'); ?>" href="?mega_link=1&amp;p=<?php echo rawurlencode(FM_PATH); ?>&amp;file=<?php echo rawurlencode($f); ?>"><i class="fa fa-link" aria-hidden="true"></i></a><?php endif; ?>
                     </td>
                 </tr>
             <?php
@@ -4414,7 +4461,7 @@ $all_files_size = 0;
         <input type="submit" class="hidden" name="tar" id="a-tar" value="tar">
         <button type="button" class="mega-action mega-needs-selection" onclick="megaConfirmBulk('tar')"><i class="fa fa-file-archive-o"></i><span><?php echo lng('Tar') ?></span></button>
         <input type="submit" class="hidden" name="copy" id="a-copy" value="Copy">
-        <button type="button" class="mega-action mega-needs-selection" onclick="document.getElementById('a-copy').click()"><i class="fa fa-files-o"></i><span><?php echo lng('Copy') ?></span></button>
+        <button type="button" class="mega-action mega-needs-selection" onclick="document.getElementById('a-copy').click()"><i class="fa fa-files-o"></i><span><?php echo lng('Copy/Move') ?></span></button>
       </div>
     </div>
     <?php endif; ?>
@@ -6353,7 +6400,7 @@ function fm_show_nav_path($path)
         if(!nav||!table||nav.querySelector('.mega-desktop-bulk'))return;
         var bar=document.createElement('div');bar.className='mega-desktop-bulk';bar.hidden=false;
         var count=document.createElement('span');count.className='mega-desktop-count';bar.appendChild(count);
-        var labels=<?php echo json_encode(array_map(function($key){return html_entity_decode(lng($key),ENT_QUOTES,'UTF-8');},['delete'=>'Delete','zip'=>'Zip','tar'=>'Tar','copy'=>'Copy','selected'=>'{count} selected']),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE); ?>;
+        var labels=<?php echo json_encode(array_map(function($key){return html_entity_decode(lng($key),ENT_QUOTES,'UTF-8');},['delete'=>'Delete','zip'=>'Zip','tar'=>'Tar','copy'=>'Copy/Move','selected'=>'{count} selected']),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE); ?>;
         [['delete',labels.delete,'fa-trash-o','mega-desktop-delete'],['zip',labels.zip,'fa-file-archive-o',''],['tar',labels.tar,'fa-file-archive-o',''],['copy',labels.copy,'fa-files-o','']].forEach(function(a){
           var b=document.createElement('button');b.type='button';b.className=a[3];
           var icon=document.createElement('i');icon.className='fa '+a[2];icon.setAttribute('aria-hidden','true');b.appendChild(icon);
