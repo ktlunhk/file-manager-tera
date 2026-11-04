@@ -217,7 +217,12 @@
         "Copy ndus": "Copiază ndus",
         "Copy cookie": "Copiază cookie",
         "Copied": "Copiat",
-        "No login cookie available": "Niciun cookie de autentificare disponibil pentru această sesiune."
+        "No login cookie available": "Niciun cookie de autentificare disponibil pentru această sesiune.",
+        "Select folder": "Selectează folder",
+        "Already exists, skipped": "Există deja, omis",
+        "Upload folder": "Încarcă folder",
+        "Drop folder here to upload": "Trage un folder aici sau atinge pentru a alege unul",
+        "CopyMove": "Copiază/Mută"
       }
     },
     {
@@ -435,7 +440,12 @@
         "Copy ndus": "ndus másolása",
         "Copy cookie": "Süti másolása",
         "Copied": "Másolva",
-        "No login cookie available": "Ehhez a munkamenethez nincs bejelentkezési süti."
+        "No login cookie available": "Ehhez a munkamenethez nincs bejelentkezési süti.",
+        "Select folder": "Mappa kiválasztása",
+        "Already exists, skipped": "Már létezik, kihagyva",
+        "Upload folder": "Mappa feltöltése",
+        "Drop folder here to upload": "Húzz ide egy mappát, vagy koppints a kiválasztáshoz",
+        "CopyMove": "Másolás/Mozgatás"
       }
     },
     {
@@ -653,7 +663,12 @@
         "Copy ndus": "Kopier ndus",
         "Copy cookie": "Kopier cookie",
         "Copied": "Kopiert",
-        "No login cookie available": "Ingen påloggingscookie tilgjengelig for denne økten."
+        "No login cookie available": "Ingen påloggingscookie tilgjengelig for denne økten.",
+        "Select folder": "Velg mappe",
+        "Already exists, skipped": "Finnes allerede, hoppet over",
+        "Upload folder": "Last opp mappe",
+        "Drop folder here to upload": "Slipp en mappe her eller trykk for å velge en",
+        "CopyMove": "Kopier/Flytt"
       }
     },
     {
@@ -871,7 +886,12 @@
         "Copy ndus": "کپی ndus",
         "Copy cookie": "کپی کوکی",
         "Copied": "کپی شد",
-        "No login cookie available": "کوکی ورودی برای این نشست در دسترس نیست."
+        "No login cookie available": "کوکی ورودی برای این نشست در دسترس نیست.",
+        "Select folder": "انتخاب پوشه",
+        "Already exists, skipped": "از قبل وجود دارد، رد شد",
+        "Upload folder": "آپلود پوشه",
+        "Drop folder here to upload": "یک پوشه را اینجا رها کنید یا برای انتخاب ضربه بزنید",
+        "CopyMove": "کپی/جابجایی"
       }
     },
     {
@@ -1168,7 +1188,11 @@
         "Copy ndus": "Копировать ndus",
         "Copy cookie": "Копировать cookie",
         "Copied": "Скопировано",
-        "No login cookie available": "Для этого сеанса cookie входа недоступен."
+        "No login cookie available": "Для этого сеанса cookie входа недоступен.",
+        "Already exists, skipped": "Уже существует, пропущено",
+        "Upload folder": "Загрузить папку",
+        "Drop folder here to upload": "Перетащите папку сюда или нажмите, чтобы выбрать",
+        "CopyMove": "Копировать/Переместить"
       }
     },
     {
@@ -1441,7 +1465,11 @@
         "Copy ndus": "Copia ndus",
         "Copy cookie": "Copia cookie",
         "Copied": "Copiato",
-        "No login cookie available": "Nessun cookie di accesso disponibile per questa sessione."
+        "No login cookie available": "Nessun cookie di accesso disponibile per questa sessione.",
+        "Already exists, skipped": "Esiste già, saltato",
+        "Upload folder": "Carica cartella",
+        "Drop folder here to upload": "Trascina qui una cartella o tocca per sceglierne una",
+        "CopyMove": "Copia/Sposta"
       }
     },
     {
@@ -1670,7 +1698,12 @@
         "Copy ndus": "Copier ndus",
         "Copy cookie": "Copier le cookie",
         "Copied": "Copié",
-        "No login cookie available": "Aucun cookie de connexion disponible pour cette session."
+        "No login cookie available": "Aucun cookie de connexion disponible pour cette session.",
+        "Select folder": "Sélectionner un dossier",
+        "Already exists, skipped": "Existe déjà, ignoré",
+        "Upload folder": "Téléverser un dossier",
+        "Drop folder here to upload": "Déposez un dossier ici ou touchez pour en choisir un",
+        "CopyMove": "Copier/Déplacer"
       }
     },
     {
@@ -1886,7 +1919,12 @@
         "Copy ndus": "Copiar ndus",
         "Copy cookie": "Copiar cookie",
         "Copied": "Copiado",
-        "No login cookie available": "No hay cookie de inicio de sesión disponible para esta sesión."
+        "No login cookie available": "No hay cookie de inicio de sesión disponible para esta sesión.",
+        "Select folder": "Seleccionar carpeta",
+        "Already exists, skipped": "Ya existe, omitido",
+        "Upload folder": "Subir carpeta",
+        "Drop folder here to upload": "Suelta una carpeta aquí o toca para elegir una",
+        "CopyMove": "Copiar/Mover"
       }
     },
     {
@@ -2088,7 +2126,12 @@
         "Copy ndus": "Copiar ndus",
         "Copy cookie": "Copiar cookie",
         "Copied": "Copiado",
-        "No login cookie available": "Non hai cookie de inicio de sesión dispoñible para esta sesión."
+        "No login cookie available": "Non hai cookie de inicio de sesión dispoñible para esta sesión.",
+        "Select folder": "Seleccionar cartafol",
+        "Already exists, skipped": "Xa existe, omitido",
+        "Upload folder": "Subir cartafol",
+        "Drop folder here to upload": "Solta un cartafol aquí ou toca para escoller un",
+        "CopyMove": "Copiar/Mover"
       }
     },
     {
@@ -2306,7 +2349,12 @@
         "Copy ndus": "Copia ndus",
         "Copy cookie": "Copia la cookie",
         "Copied": "Copiat",
-        "No login cookie available": "No hi ha cap cookie d'inici de sessió disponible per a aquesta sessió."
+        "No login cookie available": "No hi ha cap cookie d'inici de sessió disponible per a aquesta sessió.",
+        "Select folder": "Selecciona carpeta",
+        "Already exists, skipped": "Ja existeix, omès",
+        "Upload folder": "Puja carpeta",
+        "Drop folder here to upload": "Deixa una carpeta aquí o toca per triar-ne una",
+        "CopyMove": "Copiar/Moure"
       }
     },
     {
@@ -2573,7 +2621,11 @@
         "Copy ndus": "ndus kopieren",
         "Copy cookie": "Cookie kopieren",
         "Copied": "Kopiert",
-        "No login cookie available": "Für diese Sitzung ist kein Login-Cookie verfügbar."
+        "No login cookie available": "Für diese Sitzung ist kein Login-Cookie verfügbar.",
+        "Already exists, skipped": "Existiert bereits, übersprungen",
+        "Upload folder": "Ordner hochladen",
+        "Drop folder here to upload": "Ordner hier ablegen oder zum Auswählen tippen",
+        "CopyMove": "Kopieren/Verschieben"
       }
     },
     {
@@ -2775,7 +2827,12 @@
         "Copy ndus": "คัดลอก ndus",
         "Copy cookie": "คัดลอกคุกกี้",
         "Copied": "คัดลอกแล้ว",
-        "No login cookie available": "ไม่มีคุกกี้เข้าสู่ระบบสำหรับเซสชันนี้"
+        "No login cookie available": "ไม่มีคุกกี้เข้าสู่ระบบสำหรับเซสชันนี้",
+        "Select folder": "เลือกโฟลเดอร์",
+        "Already exists, skipped": "มีอยู่แล้ว ข้ามไป",
+        "Upload folder": "อัปโหลดโฟลเดอร์",
+        "Drop folder here to upload": "วางโฟลเดอร์ที่นี่ หรือแตะเพื่อเลือก",
+        "CopyMove": "คัดลอก/ย้าย"
       }
     },
     {
@@ -3108,7 +3165,11 @@
         "Copy ndus": "复制 ndus",
         "Copy cookie": "复制 Cookie",
         "Copied": "已复制",
-        "No login cookie available": "此会话没有可用的登录 Cookie。"
+        "No login cookie available": "此会话没有可用的登录 Cookie。",
+        "Already exists, skipped": "已存在，已跳过",
+        "Upload folder": "上传文件夹",
+        "Drop folder here to upload": "将文件夹拖放到此处，或点按选择",
+        "CopyMove": "复制/移动"
       }
     },
     {
@@ -3425,7 +3486,12 @@
         "Copy ndus": "複製 ndus",
         "Copy cookie": "複製 Cookie",
         "Copied": "已複製",
-        "No login cookie available": "此工作階段沒有可用的登入 Cookie。"
+        "No login cookie available": "此工作階段沒有可用的登入 Cookie。",
+        "Select folder": "選擇資料夾",
+        "Already exists, skipped": "已存在，已略過",
+        "Upload folder": "上傳資料夾",
+        "Drop folder here to upload": "將資料夾拖放到此處，或點按選擇",
+        "CopyMove": "複製/移動"
       }
     },
     {
@@ -3646,7 +3712,12 @@
         "Copy ndus": "Salin ndus",
         "Copy cookie": "Salin cookie",
         "Copied": "Disalin",
-        "No login cookie available": "Tidak ada cookie login untuk sesi ini."
+        "No login cookie available": "Tidak ada cookie login untuk sesi ini.",
+        "Select folder": "Pilih folder",
+        "Already exists, skipped": "Sudah ada, dilewati",
+        "Upload folder": "Unggah folder",
+        "Drop folder here to upload": "Letakkan folder di sini atau ketuk untuk memilih",
+        "CopyMove": "Salin/Pindah"
       }
     },
     {
@@ -3849,7 +3920,12 @@
         "Copy ndus": "Αντιγραφή ndus",
         "Copy cookie": "Αντιγραφή cookie",
         "Copied": "Αντιγράφηκε",
-        "No login cookie available": "Δεν υπάρχει διαθέσιμο cookie σύνδεσης για αυτήν τη συνεδρία."
+        "No login cookie available": "Δεν υπάρχει διαθέσιμο cookie σύνδεσης για αυτήν τη συνεδρία.",
+        "Select folder": "Επιλογή φακέλου",
+        "Already exists, skipped": "Υπάρχει ήδη, παραλείφθηκε",
+        "Upload folder": "Μεταφόρτωση φακέλου",
+        "Drop folder here to upload": "Αφήστε έναν φάκελο εδώ ή πατήστε για επιλογή",
+        "CopyMove": "Αντιγραφή/Μετακίνση"
       }
     },
     {
@@ -4147,7 +4223,11 @@
         "Copy ndus": "Copiar ndus",
         "Copy cookie": "Copiar cookie",
         "Copied": "Copiado",
-        "No login cookie available": "Nenhum cookie de login disponível para esta sessão."
+        "No login cookie available": "Nenhum cookie de login disponível para esta sessão.",
+        "Already exists, skipped": "Já existe, ignorado",
+        "Upload folder": "Enviar pasta",
+        "Drop folder here to upload": "Solte uma pasta aqui ou toque para escolher",
+        "CopyMove": "Copiar/Mover"
       }
     },
     {
@@ -4399,7 +4479,11 @@
         "Copy ndus": "Copiar ndus",
         "Copy cookie": "Copiar cookie",
         "Copied": "Copiado",
-        "No login cookie available": "Nenhum cookie de início de sessão disponível para esta sessão."
+        "No login cookie available": "Nenhum cookie de início de sessão disponível para esta sessão.",
+        "Already exists, skipped": "Já existe, ignorado",
+        "Upload folder": "Carregar pasta",
+        "Drop folder here to upload": "Largue uma pasta aqui ou toque para escolher",
+        "CopyMove": "Copiar/Mover"
       }
     },
     {
@@ -4604,7 +4688,12 @@
         "Copy ndus": "Kopiuj ndus",
         "Copy cookie": "Kopiuj ciasteczko",
         "Copied": "Skopiowano",
-        "No login cookie available": "Brak ciasteczka logowania dla tej sesji."
+        "No login cookie available": "Brak ciasteczka logowania dla tej sesji.",
+        "Select folder": "Wybierz folder",
+        "Already exists, skipped": "Już istnieje, pominięto",
+        "Upload folder": "Prześlij folder",
+        "Drop folder here to upload": "Upuść folder tutaj lub dotknij, aby wybrać",
+        "CopyMove": "Kopiuj/Przenieś"
       }
     },
     {
@@ -4862,7 +4951,11 @@
         "Copy ndus": "Sao chép ndus",
         "Copy cookie": "Sao chép cookie",
         "Copied": "Đã sao chép",
-        "No login cookie available": "Không có cookie đăng nhập cho phiên này."
+        "No login cookie available": "Không có cookie đăng nhập cho phiên này.",
+        "Already exists, skipped": "Đã tồn tại, bỏ qua",
+        "Upload folder": "Tải thư mục lên",
+        "Drop folder here to upload": "Thả thư mục vào đây hoặc chạm để chọn",
+        "CopyMove": "Sao chép/Di chuyển"
       }
     },
     {
@@ -5068,7 +5161,12 @@
         "Copy ndus": "העתק ndus",
         "Copy cookie": "העתק עוגייה",
         "Copied": "הועתק",
-        "No login cookie available": "אין עוגיית התחברות זמינה להפעלה זו."
+        "No login cookie available": "אין עוגיית התחברות זמינה להפעלה זו.",
+        "Select folder": "בחר תיקייה",
+        "Already exists, skipped": "כבר קיים, דולג",
+        "Upload folder": "העלאת תיקייה",
+        "Drop folder here to upload": "גרור תיקייה לכאן או הקש כדי לבחור",
+        "CopyMove": "העתק/העבר"
       }
     },
     {
@@ -5283,7 +5381,12 @@
         "Copy ndus": "نسخ ndus",
         "Copy cookie": "نسخ الكوكي",
         "Copied": "تم النسخ",
-        "No login cookie available": "لا يتوفر كوكي تسجيل دخول لهذه الجلسة."
+        "No login cookie available": "لا يتوفر كوكي تسجيل دخول لهذه الجلسة.",
+        "Select folder": "اختيار مجلد",
+        "Already exists, skipped": "موجود بالفعل، تم التخطي",
+        "Upload folder": "رفع مجلد",
+        "Drop folder here to upload": "أفلت مجلدًا هنا أو انقر للاختيار",
+        "CopyMove": "نسخ/نقل"
       }
     },
     {
@@ -5499,7 +5602,12 @@
         "Copy ndus": "Kopírovat ndus",
         "Copy cookie": "Kopírovat cookie",
         "Copied": "Zkopírováno",
-        "No login cookie available": "Pro tuto relaci není dostupná žádná přihlašovací cookie."
+        "No login cookie available": "Pro tuto relaci není dostupná žádná přihlašovací cookie.",
+        "Select folder": "Vybrat složku",
+        "Already exists, skipped": "Již existuje, přeskočeno",
+        "Upload folder": "Nahrát složku",
+        "Drop folder here to upload": "Přetáhněte sem složku nebo klepnutím vyberte",
+        "CopyMove": "Kopírovat/Přesunout"
       }
     },
     {
@@ -5750,7 +5858,11 @@
         "Copy ndus": "ndus'u kopyala",
         "Copy cookie": "Çerezi kopyala",
         "Copied": "Kopyalandı",
-        "No login cookie available": "Bu oturum için giriş çerezi yok."
+        "No login cookie available": "Bu oturum için giriş çerezi yok.",
+        "Already exists, skipped": "Zaten var, atlandı",
+        "Upload folder": "Klasör yükle",
+        "Drop folder here to upload": "Bir klasörü buraya bırakın veya seçmek için dokunun",
+        "CopyMove": "Kopyala/Taşı"
       }
     },
     {
@@ -5957,7 +6069,12 @@
         "Copy ndus": "Kopírovať ndus",
         "Copy cookie": "Kopírovať cookie",
         "Copied": "Skopírované",
-        "No login cookie available": "Pre túto reláciu nie je dostupná žiadna prihlasovacia cookie."
+        "No login cookie available": "Pre túto reláciu nie je dostupná žiadna prihlasovacia cookie.",
+        "Select folder": "Vybrať priečinok",
+        "Already exists, skipped": "Už existuje, preskočené",
+        "Upload folder": "Nahrať priečinok",
+        "Drop folder here to upload": "Presuňte sem priečinok alebo ho vyberte ťuknutím",
+        "CopyMove": "Kopírovať/Presunúť"
       }
     },
     {
@@ -6162,7 +6279,12 @@
         "Copy ndus": "Kopiraj ndus",
         "Copy cookie": "Kopiraj piškotek",
         "Copied": "Kopirano",
-        "No login cookie available": "Za to sejo ni na voljo piškotka za prijavo."
+        "No login cookie available": "Za to sejo ni na voljo piškotka za prijavo.",
+        "Select folder": "Izberi mapo",
+        "Already exists, skipped": "Že obstaja, preskočeno",
+        "Upload folder": "Naloži mapo",
+        "Drop folder here to upload": "Spustite mapo sem ali tapnite za izbiro",
+        "CopyMove": "Kopiraj/Premakni"
       }
     },
     {
@@ -6371,7 +6493,12 @@
         "Copy ndus": "Kopioi ndus",
         "Copy cookie": "Kopioi eväste",
         "Copied": "Kopioitu",
-        "No login cookie available": "Tälle istunnolle ei ole kirjautumisevästettä."
+        "No login cookie available": "Tälle istunnolle ei ole kirjautumisevästettä.",
+        "Select folder": "Valitse kansio",
+        "Already exists, skipped": "On jo olemassa, ohitettu",
+        "Upload folder": "Lähetä kansio",
+        "Drop folder here to upload": "Pudota kansio tähän tai valitse napauttamalla",
+        "CopyMove": "Kopioi/Siirrä"
       }
     },
     {
@@ -6644,7 +6771,11 @@
         "Copy ndus": "Kopiera ndus",
         "Copy cookie": "Kopiera cookie",
         "Copied": "Kopierat",
-        "No login cookie available": "Ingen inloggningscookie finns för den här sessionen."
+        "No login cookie available": "Ingen inloggningscookie finns för den här sessionen.",
+        "Already exists, skipped": "Finns redan, hoppades över",
+        "Upload folder": "Ladda upp mapp",
+        "Drop folder here to upload": "Släpp en mapp här eller tryck för att välja",
+        "CopyMove": "Kopiera/Flytta"
       }
     },
     {
@@ -6876,7 +7007,12 @@
         "Copy ndus": "ndus 복사",
         "Copy cookie": "쿠키 복사",
         "Copied": "복사됨",
-        "No login cookie available": "이 세션에는 사용할 수 있는 로그인 쿠키가 없습니다."
+        "No login cookie available": "이 세션에는 사용할 수 있는 로그인 쿠키가 없습니다.",
+        "Select folder": "폴더 선택",
+        "Already exists, skipped": "이미 있음, 건너뜀",
+        "Upload folder": "폴더 업로드",
+        "Drop folder here to upload": "폴더를 여기로 끌어다 놓거나 탭해서 선택하세요",
+        "CopyMove": "복사/이동"
       }
     },
     {
@@ -7113,7 +7249,12 @@
         "Copy ndus": "ndus をコピー",
         "Copy cookie": "Cookie をコピー",
         "Copied": "コピーしました",
-        "No login cookie available": "このセッションで使用できるログイン Cookie はありません。"
+        "No login cookie available": "このセッションで使用できるログイン Cookie はありません。",
+        "Select folder": "フォルダーを選択",
+        "Already exists, skipped": "既に存在するためスキップしました",
+        "Upload folder": "フォルダーをアップロード",
+        "Drop folder here to upload": "フォルダーをここにドロップするか、タップして選択",
+        "CopyMove": "コピー/移動"
       }
     },
     {
@@ -7336,7 +7477,12 @@
         "Copy ndus": "ndus хуулах",
         "Copy cookie": "Cookie хуулах",
         "Copied": "Хуулагдлаа",
-        "No login cookie available": "Энэ сессэд нэвтрэх cookie байхгүй байна."
+        "No login cookie available": "Энэ сессэд нэвтрэх cookie байхгүй байна.",
+        "Select folder": "Хавтас сонгох",
+        "Already exists, skipped": "Аль хэдийн байгаа тул алгасав",
+        "Upload folder": "Хавтас байршуулах",
+        "Drop folder here to upload": "Хавтсаа энд чирж тавих эсвэл товшиж сонгоно уу",
+        "CopyMove": "Хуулах/Зөөх"
       }
     },
     {
@@ -7602,7 +7748,11 @@
         "Copy ndus": "ndus kopiëren",
         "Copy cookie": "Cookie kopiëren",
         "Copied": "Gekopieerd",
-        "No login cookie available": "Geen inlogcookie beschikbaar voor deze sessie."
+        "No login cookie available": "Geen inlogcookie beschikbaar voor deze sessie.",
+        "Already exists, skipped": "Bestaat al, overgeslagen",
+        "Upload folder": "Map uploaden",
+        "Drop folder here to upload": "Sleep een map hierheen of tik om er een te kiezen",
+        "CopyMove": "Kopiëren/Verplaatsen"
       }
     },
     {
@@ -7856,7 +8006,11 @@
         "Copy ndus": "Kopiér ndus",
         "Copy cookie": "Kopiér cookie",
         "Copied": "Kopieret",
-        "No login cookie available": "Ingen login-cookie tilgængelig for denne session."
+        "No login cookie available": "Ingen login-cookie tilgængelig for denne session.",
+        "Already exists, skipped": "Findes allerede, sprunget over",
+        "Upload folder": "Upload mappe",
+        "Drop folder here to upload": "Slip en mappe her, eller tryk for at vælge",
+        "CopyMove": "Kopi/Flyt"
       }
     },
     {
@@ -8110,7 +8264,11 @@
         "Copy ndus": "ndus কপি করুন",
         "Copy cookie": "কুকি কপি করুন",
         "Copied": "কপি হয়েছে",
-        "No login cookie available": "এই সেশনের জন্য কোনো লগইন কুকি নেই।"
+        "No login cookie available": "এই সেশনের জন্য কোনো লগইন কুকি নেই।",
+        "Already exists, skipped": "আগে থেকেই আছে, এড়িয়ে যাওয়া হয়েছে",
+        "Upload folder": "ফোল্ডার আপলোড",
+        "Drop folder here to upload": "এখানে একটি ফোল্ডার ছাড়ুন বা বেছে নিতে ট্যাপ করুন",
+        "CopyMove": "কপি/সরান"
       }
     }
   ]
