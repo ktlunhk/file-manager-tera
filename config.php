@@ -5,7 +5,7 @@
  */
 
 /* ---- Sign-in (login.php) ---- */
-const TB_TOKEN_LOGIN_ENABLED = false; // true shows the "sign in with ndus session token" form
+const TB_TOKEN_LOGIN_ENABLED = true; // true shows the "sign in with ndus session token" form
 const TB_DEBUG = false;               // true shows detailed upstream errors
 const TB_LOG_ENABLED = true;          // private diagnostic log (terabox_log.php); set false once everything works
 const TB_CAPTCHA_AUTO_SUBMIT = true;  // sign in once automatically after the slider check succeeds
