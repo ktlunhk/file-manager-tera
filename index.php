@@ -1651,8 +1651,8 @@ if (isset($_GET['mega_vsdx']) && strpos(FM_ROOT_PATH, 'terabox://') === 0) {
 // Download
 // Download a whole folder as a ZIP. TeraBox folders are copied into a temporary LOCAL folder first
 // (same limits as ZIP creation: 1000 items, 20 levels, 256 MiB), zipped, streamed, then removed.
-if (isset($_GET['dlfolder'], $_POST['token'])) {
-    if (!verifyToken($_POST['token'])) {
+if (isset($_GET['dlfolder']) && ($_POST['token'] ?? $_GET['token'] ?? null) !== null) {
+    if (!verifyToken((string)($_POST['token'] ?? $_GET['token'] ?? ''))) {
         fm_set_msg(lng('Invalid Token.'), 'error');
         exit;
     }
@@ -1695,9 +1695,9 @@ if (isset($_GET['dlfolder'], $_POST['token'])) {
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
 }
 
-if (isset($_GET['dl'], $_POST['token'])) {
+if (isset($_GET['dl']) && ($_POST['token'] ?? $_GET['token'] ?? null) !== null) {
     // Verify the token to ensure it's valid
-    if (!verifyToken($_POST['token'])) {
+    if (!verifyToken((string)($_POST['token'] ?? $_GET['token'] ?? ''))) {
         fm_set_msg(lng("Invalid Token."), 'error');
         exit;
     }
@@ -4629,15 +4629,68 @@ $all_files_size = 0;
     e.stopPropagation();
     var url=trigger.getAttribute('data-mega-download-url');
     if(!url)return;
-    var form=document.createElement('form');
-    form.method='post';form.action=url;form.style.display='none';
-    form.setAttribute('data-no-processing','download');
     var token=document.querySelector('#main-table')?.closest('form')?.querySelector('input[name="token"]');
     if(!token)token=document.querySelector('input[name="token"]');
-    if(token){var hidden=document.createElement('input');hidden.type='hidden';hidden.name='token';hidden.value=token.value;form.appendChild(hidden);}
-    document.body.appendChild(form);
+    var data={};if(token)data.token=token.value;
+    var kind=/[?&]dlfolder=/.test(url)?'download-folder':'download';
+    function legacySubmit(){
+      // Fallback when jquery.fileDownload could not be loaded: plain POST, no progress indicator.
+      var form=document.createElement('form');
+      form.method='post';form.action=url;form.style.display='none';
+      form.setAttribute('data-no-processing','download');
+      if(token){var hidden=document.createElement('input');hidden.type='hidden';hidden.name='token';hidden.value=token.value;form.appendChild(hidden);}
+      document.body.appendChild(form);form.submit();
+      setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form);},1000);
+    }
+    // Single files keep the plain POST download. Folder ZIPs are built server-side (slow), so show the progress overlay.
+    if(kind!=='download-folder'||!window.megaShowWorking){legacySubmit();return;}
+    if(trigger.getAttribute('data-mega-downloading')==='1')return;   // ignore double clicks
+    trigger.setAttribute('data-mega-downloading','1');
+    if(window.megaCloseRowMenus)window.megaCloseRowMenus();
+    window.megaShowWorking(kind);
+    // POST into a hidden iframe: no popup, no about:blank tab. The server sets a "fileDownload" cookie the moment the
+    // ZIP starts streaming (we poll for it); if the iframe loads a normal page instead, the download failed.
+    var frameName='mega_dl_'+Date.now(), frame=document.createElement('iframe'), poll=null, done=false;
+    frame.name=frameName;frame.style.display='none';frame.setAttribute('aria-hidden','true');
+    function cookieSet(){return /(?:^|;\s*)fileDownload=true(?:;|$)/.test(document.cookie);}
+    function clearCookie(){document.cookie='fileDownload=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';}
+    function finish(){
+      if(done)return;done=true;
+      if(poll){clearInterval(poll);poll=null;}
+      clearCookie();
+      trigger.removeAttribute('data-mega-downloading');
+      if(window.megaHideWorking)window.megaHideWorking();
+      setTimeout(function(){if(frame.parentNode)frame.parentNode.removeChild(frame);if(form.parentNode)form.parentNode.removeChild(form);},60000);
+    }
+    function fail(){
+      finish();
+      // The server answers a failed download with the file list page plus an error notice: show that notice here.
+      try{
+        var doc=frame.contentDocument;
+        var notice=doc&&(doc.querySelector('.mega-inline-notice--error')||doc.querySelector('.mega-inline-notice'));
+        var host=document.querySelector('#main-table')?.closest('form')||document.querySelector('#main-table');
+        if(notice&&host&&host.parentNode){
+          document.querySelectorAll('.mega-inline-notice.mega-download-notice').forEach(function(n){n.remove();});
+          var copy=document.importNode(notice,true);copy.classList.add('mega-download-notice');
+          host.parentNode.insertBefore(copy,host);return;
+        }
+      }catch(err){}
+      window.alert(<?php echo json_encode(html_entity_decode(lng('Download failed'), ENT_QUOTES, 'UTF-8'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);
+    }
+    clearCookie();
+    var form=document.createElement('form');
+    form.method='post';form.action=url;form.target=frameName;form.style.display='none';
+    form.setAttribute('data-no-processing','download');
+    if(token){var hid=document.createElement('input');hid.type='hidden';hid.name='token';hid.value=token.value;form.appendChild(hid);}
+    document.body.appendChild(frame);document.body.appendChild(form);
+    var started=Date.now();
+    poll=setInterval(function(){
+      if(cookieSet())finish();
+      else if(Date.now()-started>30*60*1000)fail();
+    },500);
+    // A downloaded attachment never fires load; an error page does.
+    frame.addEventListener('load',function(){if(!done&&!cookieSet())fail();});
     form.submit();
-    setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form);},1000);
   });
   document.addEventListener('click',function(e){if(!e.target.closest('.mega-row-more,.mega-row-actions-menu'))document.querySelectorAll('.mega-row-actions-menu.mega-open').forEach(function(m){m.classList.remove('mega-open');});});
   function applySort(){
@@ -5927,6 +5980,8 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
     }
 
     // headers
+    // Lets jquery.fileDownload on the client know the file is now being sent (hides the progress overlay).
+    header('Set-Cookie: fileDownload=true; path=/; SameSite=Lax', false);
     header('Content-Description: File Transfer');
     header('Expires: 0');
     header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
@@ -10007,6 +10062,9 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
  megaWorkingLocales.en.names['untar-folder']='Extracting TAR archive to folder…';
  var shareProgressLabels={"ro": {"share-create": "Creează link…", "share-stop": "Oprește partajarea…"}, "hu": {"share-create": "Hivatkozás létrehozása…", "share-stop": "Megosztás leállítása…"}, "no": {"share-create": "Opprett lenke…", "share-stop": "Stopp deling…"}, "fa": {"share-create": "ایجاد پیوند…", "share-stop": "توقف اشتراک‌گذاری…"}, "ru": {"share-create": "Создать ссылку…", "share-stop": "Отключить общий доступ…"}, "it": {"share-create": "Crea link…", "share-stop": "Interrompi condivisione…"}, "fr": {"share-create": "Créer un lien…", "share-stop": "Arrêter le partage…"}, "es": {"share-create": "Crear enlace…", "share-stop": "Dejar de compartir…"}, "gl": {"share-create": "Crear ligazón…", "share-stop": "Deixar de compartir…"}, "ca": {"share-create": "Crea un enllaç…", "share-stop": "Deixa de compartir…"}, "de": {"share-create": "Link erstellen…", "share-stop": "Freigabe beenden…"}, "th": {"share-create": "สร้างลิงก์…", "share-stop": "หยุดแชร์…"}, "zh-CN": {"share-create": "正在创建分享链接…", "share-stop": "正在停止分享…"}, "zh-TW": {"share-create": "正在建立分享連結…", "share-stop": "正在停止分享…"}, "id": {"share-create": "Buat tautan…", "share-stop": "Hentikan berbagi…"}, "gr": {"share-create": "Δημιουργία συνδέσμου…", "share-stop": "Διακοπή κοινής χρήσης…"}, "pt_BR": {"share-create": "Criar link…", "share-stop": "Parar de compartilhar…"}, "pt_PT": {"share-create": "Criar ligação…", "share-stop": "Parar de partilhar…"}, "pl": {"share-create": "Utwórz link…", "share-stop": "Zatrzymaj udostępnianie…"}, "vi": {"share-create": "Tạo liên kết…", "share-stop": "Dừng chia sẻ…"}, "he": {"share-create": "יצירת קישור…", "share-stop": "הפסקת שיתוף…"}, "ar": {"share-create": "إنشاء رابط…", "share-stop": "إيقاف المشاركة…"}, "cz": {"share-create": "Vytvořit odkaz…", "share-stop": "Ukončit sdílení…"}, "tr": {"share-create": "Bağlantı oluştur…", "share-stop": "Paylaşımı durdur…"}, "sk": {"share-create": "Vytvoriť odkaz…", "share-stop": "Ukončiť zdieľanie…"}, "sl": {"share-create": "Ustvari povezavo…", "share-stop": "Ustavi skupno rabo…"}, "fi": {"share-create": "Luo linkki…", "share-stop": "Lopeta jakaminen…"}, "sv": {"share-create": "Skapa länk…", "share-stop": "Sluta dela…"}, "ko": {"share-create": "링크 만들기…", "share-stop": "공유 중지…"}, "ja": {"share-create": "リンクを作成…", "share-stop": "共有を停止…"}, "mn_MN": {"share-create": "Холбоос үүсгэх…", "share-stop": "Хуваалцахыг зогсоох…"}, "nl": {"share-create": "Link maken…", "share-stop": "Delen stoppen…"}, "da": {"share-create": "Opret link…", "share-stop": "Stop deling…"}, "bn": {"share-create": "লিংক তৈরি করুন…", "share-stop": "শেয়ার বন্ধ করুন…"}, "en": {"share-create": "Creating share link…", "share-stop": "Stopping sharing…"}};
  Object.keys(megaWorkingLocales).forEach(function(code){Object.assign(megaWorkingLocales[code].names,shareProgressLabels[code]||shareProgressLabels.en);});
+ Object.assign(megaWorkingLocales.en.names,{'download':'Preparing download…','download-folder':'Preparing folder ZIP for download…'});
+ Object.assign(megaWorkingLocales['zh-TW'].names,{'download':'正在準備下載…','download-folder':'正在準備資料夾 ZIP 下載…'});
+ Object.assign(megaWorkingLocales['zh-CN'].names,{'download':'正在准备下载…','download-folder':'正在准备文件夹 ZIP 下载…'});
  Object.keys(megaWorkingLocales).forEach(function(code){var names=megaWorkingLocales[code].names;names['rubbish-restore']=names.move;names['rubbish-delete']=names.delete;});
  megaWorkingLocales.en.names['rubbish-restore']='Restoring selected items…';
  megaWorkingLocales.en.names['rubbish-delete']='Permanently deleting selected items…';
