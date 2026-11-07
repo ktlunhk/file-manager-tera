@@ -1664,32 +1664,8 @@ if (isset($_GET['dlfolder']) && ($_POST['token'] ?? $_GET['token'] ?? null) !== 
         $dfError = lng('Invalid file');
     } elseif (!is_dir($dfBase . '/' . $dfName)) {
         $dfError = lng('Folder not found');
-    } elseif (!class_exists('ZipArchive')) {
-        $dfError = lng('Operations with archives are not available');
     } else {
-        @set_time_limit(0);
-        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();   // do not hold the session lock while staging
-        $dfStage = sys_get_temp_dir() . '/mega_dlfolder_' . bin2hex(random_bytes(12));
-        if (!@mkdir($dfStage, 0700)) {
-            $dfError = 'Cannot create temporary directory';
-        } else {
-            register_shutdown_function('mega_archive_remove_temp', $dfStage);   // also runs if the browser disconnects
-            try {
-                $dfCount = 0; $dfBytes = 0;
-                mega_archive_stage_item($dfBase . '/' . $dfName, $dfStage . '/' . $dfName, $dfCount, $dfBytes, 0);
-                $dfZip = $dfStage . '/result.zip';
-                $dfArchive = new ZipArchive();
-                if ($dfArchive->open($dfZip, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException('Cannot initialize ZIP archive');
-                $dfOk = mega_archive_add_zip($dfArchive, $dfStage . '/' . $dfName, $dfName);
-                $dfClosed = $dfArchive->close();
-                if (!$dfOk || !$dfClosed || !is_file($dfZip)) throw new RuntimeException('Failed to write ZIP archive');
-                fm_download_file($dfZip, $dfName . '.zip', 1024);
-                exit;
-            } catch (Throwable $e) {
-                $dfError = $e->getMessage();
-                error_log('TeraBox folder download failed: ' . $dfError);
-            }
-        }
+        $dfError = mega_stream_zip_download($dfBase, array($dfName), $dfName . '.zip');   // ends the request on success
     }
     fm_set_msg(lng('Download failed') . ($dfError !== '' ? ': ' . $dfError : ''), 'error');
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
@@ -1749,6 +1725,39 @@ if (isset($_POST['check_exists'], $_POST['paths']) && !FM_READONLY) {
     }
     echo json_encode(array('status' => 'ok', 'existing' => $ceExisting));
     exit();
+}
+
+// Download all selected items: a single file is sent as it is, anything else as one ZIP.
+if (isset($_POST['bulkdl'], $_POST['token'])) {
+    if (!verifyToken((string)$_POST['token'])) {
+        fm_set_msg(lng('Invalid Token.'), 'error');
+        exit;
+    }
+    $bdBase = rtrim(FM_ROOT_PATH, '/') . (FM_PATH !== '' ? '/' . FM_PATH : '');
+    $bdError = '';
+    $bdNames = array();
+    foreach ((isset($_POST['file']) && is_array($_POST['file'])) ? $_POST['file'] : array() as $bdItem) {
+        // Selected items are immediate children of the current directory.
+        if (!is_string($bdItem) || $bdItem === '' || $bdItem === '.' || $bdItem === '..' ||
+            basename($bdItem) !== $bdItem || strpbrk($bdItem, "/\\\0") !== false) {
+            $bdError = lng('Invalid file');
+            break;
+        }
+        $bdNames[$bdItem] = true;
+    }
+    $bdNames = array_keys($bdNames);
+    if ($bdError === '' && !$bdNames) {
+        $bdError = lng('Nothing selected');
+    } elseif ($bdError === '' && count($bdNames) === 1 && is_file($bdBase . '/' . $bdNames[0])) {
+        if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+        fm_download_file($bdBase . '/' . $bdNames[0], $bdNames[0], 1024);
+        exit;
+    } elseif ($bdError === '') {
+        $bdZip = (count($bdNames) === 1 ? $bdNames[0] : 'archive_' . date('ymd_His')) . '.zip';
+        $bdError = mega_stream_zip_download($bdBase, $bdNames, $bdZip);   // ends the request on success
+    }
+    fm_set_msg(lng('Download failed') . ($bdError !== '' ? ': ' . $bdError : ''), 'error');
+    fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
 }
 
 // Upload
@@ -2032,6 +2041,41 @@ if (isset($_POST['group'], $_POST['token']) && (isset($_POST['zip']) || isset($_
         if (!$success) fm_set_msg(lng('Archive not created') . ': ' . $error, 'error');
     }
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
+}
+
+/**
+ * Copy the named children of $base into a temporary local folder, zip them and send the ZIP to the browser.
+ * Same limits as ZIP creation (see mega_archive_stage_item). Returns an error message on failure;
+ * on success the file is sent and the request ends. Shared by folder download and multi-select download.
+ */
+function mega_stream_zip_download($base, array $names, $zipName)
+{
+    if (!class_exists('ZipArchive')) return lng('Operations with archives are not available');
+    @set_time_limit(0);
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();   // do not hold the session lock while staging
+    $stage = sys_get_temp_dir() . '/mega_dlfolder_' . bin2hex(random_bytes(12));
+    if (!@mkdir($stage, 0700) || !@mkdir($stage . '/files', 0700)) return 'Cannot create temporary directory';
+    register_shutdown_function('mega_archive_remove_temp', $stage);   // also runs if the browser disconnects
+    try {
+        $count = 0; $bytes = 0;
+        foreach ($names as $name) {
+            mega_archive_stage_item($base . '/' . $name, $stage . '/files/' . $name, $count, $bytes, 0);
+        }
+        $zipPath = $stage . '/result.zip';
+        $archive = new ZipArchive();
+        if ($archive->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) throw new RuntimeException('Cannot initialize ZIP archive');
+        $ok = true;
+        foreach ($names as $name) {
+            if (!mega_archive_add_zip($archive, $stage . '/files/' . $name, $name)) { $ok = false; break; }
+        }
+        $closed = $archive->close();
+        if (!$ok || !$closed || !is_file($zipPath)) throw new RuntimeException('Failed to write ZIP archive');
+        fm_download_file($zipPath, $zipName, 1024);
+        exit;
+    } catch (Throwable $e) {
+        error_log('TeraBox ZIP download failed: ' . $e->getMessage());
+        return $e->getMessage();
+    }
 }
 
 /** Stage TeraBox files locally, with bounds to protect shared hosting. */
@@ -4439,7 +4483,7 @@ $all_files_size = 0;
       .mega-selection-count{font-weight:600;color:#334155;font-size:14px}
       .mega-clear{border:1px solid #d8e1ea;border-radius:9px;background:#fff;color:#475569;padding:7px 13px;min-height:38px}
       .mega-action-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
-      .mega-action-grid.operations{grid-template-columns:repeat(4,minmax(0,1fr))}
+      .mega-action-grid.operations{grid-template-columns:repeat(5,minmax(0,1fr))}
       .mega-action{border:1px solid #e2e8f0;background:#f8fafc;border-radius:11px;color:#334155;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:9px 3px;text-align:center;text-decoration:none!important;font-size:13px;line-height:1.15;cursor:pointer}
       .mega-action i{font-size:19px;color:#4778ad}
       .mega-action.danger i,.mega-action.danger{color:#c53d4b}
@@ -4454,6 +4498,7 @@ $all_files_size = 0;
         <span class="mega-selection-count" id="mega-selected-count" aria-live="polite">0 selected</span>
       </div>
       <div class="mega-action-grid operations">
+        <button type="button" class="mega-action mega-needs-selection" onclick="megaBulkDownload()"><i class="fa fa-download"></i><span><?php echo lng('Download') ?></span></button>
         <input type="submit" class="hidden" name="delete" id="a-delete" value="Delete">
         <button type="button" class="mega-action danger mega-needs-selection" onclick="megaConfirmBulk('delete')"><i class="fa fa-trash-o"></i><span><?php echo lng('Delete') ?></span></button>
         <input type="submit" class="hidden" name="zip" id="a-zip" value="zip">
@@ -4634,7 +4679,7 @@ $all_files_size = 0;
     var data={};if(token)data.token=token.value;
     var kind=/[?&]dlfolder=/.test(url)?'download-folder':'download';
     function legacySubmit(){
-      // Fallback when jquery.fileDownload could not be loaded: plain POST, no progress indicator.
+      // Plain POST download, no progress indicator.
       var form=document.createElement('form');
       form.method='post';form.action=url;form.style.display='none';
       form.setAttribute('data-no-processing','download');
@@ -4642,55 +4687,11 @@ $all_files_size = 0;
       document.body.appendChild(form);form.submit();
       setTimeout(function(){if(form.parentNode)form.parentNode.removeChild(form);},1000);
     }
-    // Single files keep the plain POST download. Folder ZIPs are built server-side (slow), so show the progress overlay.
-    if(kind!=='download-folder'||!window.megaShowWorking){legacySubmit();return;}
-    if(trigger.getAttribute('data-mega-downloading')==='1')return;   // ignore double clicks
-    trigger.setAttribute('data-mega-downloading','1');
+    // Folder ZIPs are built server-side (slow): show progress at once. Single files: only if the wait is noticeable.
+    var mgr=window.megaOperationManager;
+    if(!mgr||!mgr.download){legacySubmit();return;}
     if(window.megaCloseRowMenus)window.megaCloseRowMenus();
-    window.megaShowWorking(kind);
-    // POST into a hidden iframe: no popup, no about:blank tab. The server sets a "fileDownload" cookie the moment the
-    // ZIP starts streaming (we poll for it); if the iframe loads a normal page instead, the download failed.
-    var frameName='mega_dl_'+Date.now(), frame=document.createElement('iframe'), poll=null, done=false;
-    frame.name=frameName;frame.style.display='none';frame.setAttribute('aria-hidden','true');
-    function cookieSet(){return /(?:^|;\s*)fileDownload=true(?:;|$)/.test(document.cookie);}
-    function clearCookie(){document.cookie='fileDownload=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';}
-    function finish(){
-      if(done)return;done=true;
-      if(poll){clearInterval(poll);poll=null;}
-      clearCookie();
-      trigger.removeAttribute('data-mega-downloading');
-      if(window.megaHideWorking)window.megaHideWorking();
-      setTimeout(function(){if(frame.parentNode)frame.parentNode.removeChild(frame);if(form.parentNode)form.parentNode.removeChild(form);},60000);
-    }
-    function fail(){
-      finish();
-      // The server answers a failed download with the file list page plus an error notice: show that notice here.
-      try{
-        var doc=frame.contentDocument;
-        var notice=doc&&(doc.querySelector('.mega-inline-notice--error')||doc.querySelector('.mega-inline-notice'));
-        var host=document.querySelector('#main-table')?.closest('form')||document.querySelector('#main-table');
-        if(notice&&host&&host.parentNode){
-          document.querySelectorAll('.mega-inline-notice.mega-download-notice').forEach(function(n){n.remove();});
-          var copy=document.importNode(notice,true);copy.classList.add('mega-download-notice');
-          host.parentNode.insertBefore(copy,host);return;
-        }
-      }catch(err){}
-      window.alert(<?php echo json_encode(html_entity_decode(lng('Download failed'), ENT_QUOTES, 'UTF-8'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>);
-    }
-    clearCookie();
-    var form=document.createElement('form');
-    form.method='post';form.action=url;form.target=frameName;form.style.display='none';
-    form.setAttribute('data-no-processing','download');
-    if(token){var hid=document.createElement('input');hid.type='hidden';hid.name='token';hid.value=token.value;form.appendChild(hid);}
-    document.body.appendChild(frame);document.body.appendChild(form);
-    var started=Date.now();
-    poll=setInterval(function(){
-      if(cookieSet())finish();
-      else if(Date.now()-started>30*60*1000)fail();
-    },500);
-    // A downloaded attachment never fires load; an error page does.
-    frame.addEventListener('load',function(){if(!done&&!cookieSet())fail();});
-    form.submit();
+    mgr.download(kind,url,kind==='download-folder'?{data:data}:{data:data,showDelay:700,maxWait:20000});
   });
   document.addEventListener('click',function(e){if(!e.target.closest('.mega-row-more,.mega-row-actions-menu'))document.querySelectorAll('.mega-row-actions-menu.mega-open').forEach(function(m){m.classList.remove('mega-open');});});
   function applySort(){
@@ -6455,13 +6456,14 @@ function fm_show_nav_path($path)
         if(!nav||!table||nav.querySelector('.mega-desktop-bulk'))return;
         var bar=document.createElement('div');bar.className='mega-desktop-bulk';bar.hidden=false;
         var count=document.createElement('span');count.className='mega-desktop-count';bar.appendChild(count);
-        var labels=<?php echo json_encode(array_map(function($key){return html_entity_decode(lng($key),ENT_QUOTES,'UTF-8');},['delete'=>'Delete','zip'=>'Zip','tar'=>'Tar','copy'=>'Copy/Move','selected'=>'{count} selected']),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE); ?>;
-        [['delete',labels.delete,'fa-trash-o','mega-desktop-delete'],['zip',labels.zip,'fa-file-archive-o',''],['tar',labels.tar,'fa-file-archive-o',''],['copy',labels.copy,'fa-files-o','']].forEach(function(a){
+        var labels=<?php echo json_encode(array_map(function($key){return html_entity_decode(lng($key),ENT_QUOTES,'UTF-8');},['download'=>'Download','delete'=>'Delete','zip'=>'Zip','tar'=>'Tar','copy'=>'Copy/Move','selected'=>'{count} selected']),JSON_HEX_TAG|JSON_HEX_AMP|JSON_HEX_APOS|JSON_HEX_QUOT|JSON_UNESCAPED_UNICODE); ?>;
+        [['download',labels.download,'fa-download',''],['delete',labels.delete,'fa-trash-o','mega-desktop-delete'],['zip',labels.zip,'fa-file-archive-o',''],['tar',labels.tar,'fa-file-archive-o',''],['copy',labels.copy,'fa-files-o','']].forEach(function(a){
           var b=document.createElement('button');b.type='button';b.className=a[3];
           var icon=document.createElement('i');icon.className='fa '+a[2];icon.setAttribute('aria-hidden','true');b.appendChild(icon);
           b.appendChild(document.createTextNode(a[1]));
           b.addEventListener('click',function(){
-            if(a[0]==='copy'){var input=document.getElementById('a-copy');if(input)input.click();}
+            if(a[0]==='download'){if(window.megaBulkDownload)megaBulkDownload();}
+            else if(a[0]==='copy'){var input=document.getElementById('a-copy');if(input)input.click();}
             else if(typeof megaConfirmBulk==='function')megaConfirmBulk(a[0]);
           });bar.appendChild(b);
         });
@@ -6483,6 +6485,7 @@ function fm_show_nav_path($path)
       <div class="mega-mobile-menu" id="mega-mobile-menu" hidden>
         <div class="mega-mobile-selected-actions" hidden>
           <div class="mega-mobile-selection-label"><?php echo lng('Selected count placeholder'); ?></div>
+          <button type="button" data-bulk="download"><i class="fa fa-download"></i> <?php echo lng('Download'); ?></button>
           <button type="button" data-bulk="copy"><i class="fa fa-files-o"></i> <?php echo lng('Copy/Move'); ?></button>
           <button type="button" data-bulk="delete"><i class="fa fa-trash-o"></i> <?php echo lng('Delete'); ?></button>
           <button type="button" data-bulk="zip"><i class="fa fa-file-archive-o"></i> <?php echo lng('Create ZIP'); ?></button>
@@ -6509,7 +6512,7 @@ function fm_show_nav_path($path)
       trigger.addEventListener('click',function(e){e.stopPropagation();var opening=panel.hidden;panel.hidden=!opening;trigger.setAttribute('aria-expanded',String(opening));});
       document.addEventListener('click',function(e){if(!panel.hidden&&!panel.contains(e.target)&&!trigger.contains(e.target))close()});
       document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
-      panel.addEventListener('click',function(e){var button=e.target.closest('[data-bulk]');if(!button)return;var op=button.getAttribute('data-bulk');close();if(op==='copy'){var copy=document.getElementById('a-copy');if(copy)copy.click();}else if(typeof megaConfirmBulk==='function')megaConfirmBulk(op);});
+      panel.addEventListener('click',function(e){var button=e.target.closest('[data-bulk]');if(!button)return;var op=button.getAttribute('data-bulk');close();if(op==='download'){if(window.megaBulkDownload)megaBulkDownload();}else if(op==='copy'){var copy=document.getElementById('a-copy');if(copy)copy.click();}else if(typeof megaConfirmBulk==='function')megaConfirmBulk(op);});
       window.megaMobileUpdateMenu=function(count){var selected=panel.querySelector('.mega-mobile-selected-actions');if(selected){selected.hidden=count===0;selected.querySelector('.mega-mobile-selection-label').textContent=count+' '+<?php echo json_encode(html_entity_decode(lng('selected'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;}};
     })();
     </script>
@@ -10062,9 +10065,9 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
  megaWorkingLocales.en.names['untar-folder']='Extracting TAR archive to folder…';
  var shareProgressLabels={"ro": {"share-create": "Creează link…", "share-stop": "Oprește partajarea…"}, "hu": {"share-create": "Hivatkozás létrehozása…", "share-stop": "Megosztás leállítása…"}, "no": {"share-create": "Opprett lenke…", "share-stop": "Stopp deling…"}, "fa": {"share-create": "ایجاد پیوند…", "share-stop": "توقف اشتراک‌گذاری…"}, "ru": {"share-create": "Создать ссылку…", "share-stop": "Отключить общий доступ…"}, "it": {"share-create": "Crea link…", "share-stop": "Interrompi condivisione…"}, "fr": {"share-create": "Créer un lien…", "share-stop": "Arrêter le partage…"}, "es": {"share-create": "Crear enlace…", "share-stop": "Dejar de compartir…"}, "gl": {"share-create": "Crear ligazón…", "share-stop": "Deixar de compartir…"}, "ca": {"share-create": "Crea un enllaç…", "share-stop": "Deixa de compartir…"}, "de": {"share-create": "Link erstellen…", "share-stop": "Freigabe beenden…"}, "th": {"share-create": "สร้างลิงก์…", "share-stop": "หยุดแชร์…"}, "zh-CN": {"share-create": "正在创建分享链接…", "share-stop": "正在停止分享…"}, "zh-TW": {"share-create": "正在建立分享連結…", "share-stop": "正在停止分享…"}, "id": {"share-create": "Buat tautan…", "share-stop": "Hentikan berbagi…"}, "gr": {"share-create": "Δημιουργία συνδέσμου…", "share-stop": "Διακοπή κοινής χρήσης…"}, "pt_BR": {"share-create": "Criar link…", "share-stop": "Parar de compartilhar…"}, "pt_PT": {"share-create": "Criar ligação…", "share-stop": "Parar de partilhar…"}, "pl": {"share-create": "Utwórz link…", "share-stop": "Zatrzymaj udostępnianie…"}, "vi": {"share-create": "Tạo liên kết…", "share-stop": "Dừng chia sẻ…"}, "he": {"share-create": "יצירת קישור…", "share-stop": "הפסקת שיתוף…"}, "ar": {"share-create": "إنشاء رابط…", "share-stop": "إيقاف المشاركة…"}, "cz": {"share-create": "Vytvořit odkaz…", "share-stop": "Ukončit sdílení…"}, "tr": {"share-create": "Bağlantı oluştur…", "share-stop": "Paylaşımı durdur…"}, "sk": {"share-create": "Vytvoriť odkaz…", "share-stop": "Ukončiť zdieľanie…"}, "sl": {"share-create": "Ustvari povezavo…", "share-stop": "Ustavi skupno rabo…"}, "fi": {"share-create": "Luo linkki…", "share-stop": "Lopeta jakaminen…"}, "sv": {"share-create": "Skapa länk…", "share-stop": "Sluta dela…"}, "ko": {"share-create": "링크 만들기…", "share-stop": "공유 중지…"}, "ja": {"share-create": "リンクを作成…", "share-stop": "共有を停止…"}, "mn_MN": {"share-create": "Холбоос үүсгэх…", "share-stop": "Хуваалцахыг зогсоох…"}, "nl": {"share-create": "Link maken…", "share-stop": "Delen stoppen…"}, "da": {"share-create": "Opret link…", "share-stop": "Stop deling…"}, "bn": {"share-create": "লিংক তৈরি করুন…", "share-stop": "শেয়ার বন্ধ করুন…"}, "en": {"share-create": "Creating share link…", "share-stop": "Stopping sharing…"}};
  Object.keys(megaWorkingLocales).forEach(function(code){Object.assign(megaWorkingLocales[code].names,shareProgressLabels[code]||shareProgressLabels.en);});
- Object.assign(megaWorkingLocales.en.names,{'download':'Preparing download…','download-folder':'Preparing folder ZIP for download…'});
- Object.assign(megaWorkingLocales['zh-TW'].names,{'download':'正在準備下載…','download-folder':'正在準備資料夾 ZIP 下載…'});
- Object.assign(megaWorkingLocales['zh-CN'].names,{'download':'正在准备下载…','download-folder':'正在准备文件夹 ZIP 下载…'});
+ Object.assign(megaWorkingLocales.en.names,{'download':'Preparing download…','download-folder':'Preparing folder ZIP for download…','download-bulk':'Preparing selected items for download…'});
+ Object.assign(megaWorkingLocales['zh-TW'].names,{'download':'正在準備下載…','download-folder':'正在準備資料夾 ZIP 下載…','download-bulk':'正在準備所選項目下載…'});
+ Object.assign(megaWorkingLocales['zh-CN'].names,{'download':'正在准备下载…','download-folder':'正在准备文件夹 ZIP 下载…','download-bulk':'正在准备所选项目下载…'});
  Object.keys(megaWorkingLocales).forEach(function(code){var names=megaWorkingLocales[code].names;names['rubbish-restore']=names.move;names['rubbish-delete']=names.delete;});
  megaWorkingLocales.en.names['rubbish-restore']='Restoring selected items…';
  megaWorkingLocales.en.names['rubbish-delete']='Permanently deleting selected items…';
@@ -10200,6 +10203,62 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
  };
  window.megaOperationManager={
   begin:function(action){window.megaShowWorking(action);},end:function(){window.megaHideWorking();},
+  // Shared download with progress: shows the processing overlay while the server prepares the file (e.g. a folder ZIP).
+  // POSTs into a hidden iframe (no popup / about:blank tab). The server sets a "fileDownload=true" cookie when the file
+  // starts streaming; if the iframe loads a normal page instead, the download failed and its error notice is shown.
+  // options: data (object of POST fields), failMessage (fallback text), onDone(), onFail(),
+  //   showDelay (ms to wait before showing the overlay, so instant downloads do not flash it),
+  //   maxWait (ms after which the overlay is closed silently if no start signal arrived; the download itself continues).
+  // Returns false if one is already running.
+  download:function(action,url,options){
+   options=options||{};
+   if(window.megaDownloadBusy)return false;
+   window.megaDownloadBusy=true;
+   var frameName='mega_dl_'+Date.now(),frame=document.createElement('iframe'),form=document.createElement('form'),poll=null,done=false,shown=false,showTimer=null;
+   function cookieSet(){return /(?:^|;\s*)fileDownload=true(?:;|$)/.test(document.cookie);}
+   function clearCookie(){document.cookie='fileDownload=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';}
+   function finish(){
+    if(done)return false;done=true;
+    if(poll){clearInterval(poll);poll=null;}
+    if(showTimer){clearTimeout(showTimer);showTimer=null;}
+    clearCookie();window.megaDownloadBusy=false;if(shown)window.megaHideWorking();
+    setTimeout(function(){if(frame.parentNode)frame.parentNode.removeChild(frame);if(form.parentNode)form.parentNode.removeChild(form);},60000);
+    return true;
+   }
+   function fail(){
+    if(!finish())return;
+    try{
+     var doc=frame.contentDocument;
+     var notice=doc&&(doc.querySelector('.mega-inline-notice--error')||doc.querySelector('.mega-inline-notice'));
+     var host=document.querySelector('#main-table')&&(document.querySelector('#main-table').closest('form')||document.querySelector('#main-table'));
+     if(notice&&host&&host.parentNode){
+      document.querySelectorAll('.mega-inline-notice.mega-download-notice').forEach(function(n){n.remove();});
+      var copy=document.importNode(notice,true);copy.classList.add('mega-download-notice');
+      host.parentNode.insertBefore(copy,host);
+      if(typeof options.onFail==='function')options.onFail();return;
+     }
+    }catch(err){}
+    var msg=options.failMessage||window.megaDownloadFailMessage;if(msg)window.alert(msg);
+    if(typeof options.onFail==='function')options.onFail();
+   }
+   function show(){showTimer=null;if(!done){shown=true;window.megaShowWorking(action);}}
+   if(options.showDelay>0)showTimer=setTimeout(show,options.showDelay);else show();
+   frame.name=frameName;frame.style.display='none';frame.setAttribute('aria-hidden','true');
+   form.method='post';form.action=url;form.target=frameName;form.style.display='none';
+   form.setAttribute('data-no-processing','download');
+   Object.keys(options.data||{}).forEach(function(k){[].concat(options.data[k]).forEach(function(v){var i=document.createElement('input');i.type='hidden';i.name=k;i.value=v;form.appendChild(i);});});   // arrays become repeated fields (file[])
+   clearCookie();
+   document.body.appendChild(frame);document.body.appendChild(form);
+   var started=Date.now();
+   poll=setInterval(function(){
+    if(cookieSet()){if(finish()&&typeof options.onDone==='function')options.onDone();}
+    else if(options.maxWait&&Date.now()-started>options.maxWait)finish();   // no signal: stop showing progress, let the download continue
+    else if(Date.now()-started>30*60*1000)fail();
+   },500);
+   frame.addEventListener('load',function(){if(!done&&!cookieSet())fail();});   // an attachment never fires load; an error page does
+   form.submit();
+   return true;
+  },
   ajax:function(action,options){
    if(!window.jQuery)return null;
    var before=options.beforeSend,complete=options.complete,started=false;
@@ -10208,6 +10267,25 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
    return jQuery.ajax(options);
   }
  };
+ window.megaDownloadFailMessage=<?php echo json_encode(html_entity_decode(lng('Download failed'), ENT_QUOTES, 'UTF-8'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE); ?>;
+ // Download selected items (one file as is, otherwise one ZIP). Used by the mobile menu, the desktop bar and the bottom action grid.
+ window.megaBulkDownload=function(){
+  var table=document.getElementById('main-table'),m=window.megaOperationManager;
+  if(!table||!m||!m.download)return;
+  var files=Array.prototype.map.call(table.querySelectorAll('tbody input[name="file[]"]:checked'),function(b){return b.value;});
+  if(!files.length)return;
+  var f=table.closest('form'),tok=(f&&f.querySelector('input[name="token"]'))||document.querySelector('input[name="token"]');
+  if(window.megaCloseRowMenus)window.megaCloseRowMenus();
+  m.download('download-bulk','?p='+<?php echo json_encode(urlencode(FM_PATH)); ?>,{data:{bulkdl:'1','file[]':files,token:tok?tok.value:''},showDelay:700});
+ };
+ // The Download button of the file preview dialog uses the same shared download.
+ document.addEventListener('submit',function(e){
+  var f=e.target,m=window.megaOperationManager;
+  if(!f||!f.matches||!f.matches('form[data-no-processing="download"]')||!m||!m.download)return;
+  e.preventDefault();
+  var data={};Array.prototype.forEach.call(f.elements,function(el){if(el.name&&el.type==='hidden')data[el.name]=el.value;});
+  m.download('download',f.getAttribute('action'),{data:data,showDelay:700,maxWait:20000});
+ },true);
  // Capture the actual button, including browsers that omit SubmitEvent.submitter.
  document.addEventListener('click',function(e){
   var btn=e.target.closest('button[type="submit"],input[type="submit"]');
