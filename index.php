@@ -5981,7 +5981,7 @@ function fm_download_file($fileLocation, $fileName, $chunkSize  = 1024)
     }
 
     // headers
-    // Lets jquery.fileDownload on the client know the file is now being sent (hides the progress overlay).
+    // Tells the page (megaOperationManager.download) that the file is now being sent, so it can hide the progress overlay.
     header('Set-Cookie: fileDownload=true; path=/; SameSite=Lax', false);
     header('Content-Description: File Transfer');
     header('Expires: 0');
@@ -6504,12 +6504,42 @@ function fm_show_nav_path($path)
         <form method="post" action="logout.php" style="display:contents"><input type="hidden" name="csrf" value="<?php echo e(csrf_token()); ?>"><a href="?logout=1" onclick="this.parentNode.submit();return false;"><i class="fa fa-sign-out"></i> <?php echo lng('Logout'); ?></a></form>
       </div>
     </div>
+    <style id="mega-mobile-menu-compact">
+    /* Label font stays equal to the file list; only the vertical gaps shrink. */
+    body .mega-mobile-menu.mega-compact-1 a,body .mega-mobile-menu.mega-compact-1 button{min-height:34px!important;padding-top:4px!important;padding-bottom:4px!important;line-height:1.2!important}
+    body .mega-mobile-menu.mega-compact-2 a,body .mega-mobile-menu.mega-compact-2 button{min-height:28px!important;padding-top:2px!important;padding-bottom:2px!important;line-height:1.15!important}
+    body .mega-mobile-menu.mega-compact-3 a,body .mega-mobile-menu.mega-compact-3 button{min-height:23px!important;padding-top:0!important;padding-bottom:0!important;line-height:1.1!important}
+    body .mega-mobile-menu.mega-compact-1 hr{margin:2px 6px!important}
+    body .mega-mobile-menu.mega-compact-2 hr,body .mega-mobile-menu.mega-compact-3 hr{margin:1px 6px!important}
+    body .mega-mobile-menu.mega-compact-2 .mega-mobile-selection-label,body .mega-mobile-menu.mega-compact-3 .mega-mobile-selection-label{padding:2px 10px!important}
+    </style>
     <script>
     (function(){
       var trigger=document.querySelector('.mega-mobile-menu-trigger'),panel=document.getElementById('mega-mobile-menu');
       if(!trigger||!panel)return;
+      // Fit the menu to the really visible area (mobile browser toolbars make 100dvh unreliable).
+      function fit(){
+        if(panel.hidden)return;
+        var vv=window.visualViewport,
+            vh=Math.min(window.innerHeight||9999,document.documentElement.clientHeight||9999,vv?vv.height:9999),
+            top=panel.getBoundingClientRect().top-(vv?vv.offsetTop:0),
+            avail=Math.floor(vh-top-14);
+        if(avail<120)avail=120;
+        panel.style.setProperty('max-height',avail+'px','important');
+        panel.style.setProperty('overflow-y','auto','important');
+        panel.style.setProperty('overscroll-behavior','contain');
+        panel.style.setProperty('-webkit-overflow-scrolling','touch');
+        panel.style.setProperty('padding-bottom','10px','important');
+        // Tighten the spacing step by step until every item (incl. Sign Out) fits without scrolling.
+        panel.classList.remove('mega-compact-1','mega-compact-2','mega-compact-3');
+        for(var lvl=1;lvl<=3&&panel.scrollHeight>panel.clientHeight+1;lvl++){panel.classList.add('mega-compact-'+lvl);if(lvl>1)panel.classList.remove('mega-compact-'+(lvl-1));}
+      }
+      var fitTimer=null;function fitSoon(){if(fitTimer)return;fitTimer=setTimeout(function(){fitTimer=null;fit();},0);}
+      window.addEventListener('resize',fitSoon);window.addEventListener('orientationchange',function(){setTimeout(fit,250)});
+      if(window.visualViewport){window.visualViewport.addEventListener('resize',fitSoon);window.visualViewport.addEventListener('scroll',fitSoon);}
+      if(window.MutationObserver)new MutationObserver(fitSoon).observe(panel,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden']});
       function close(){panel.hidden=true;trigger.setAttribute('aria-expanded','false')}
-      trigger.addEventListener('click',function(e){e.stopPropagation();var opening=panel.hidden;panel.hidden=!opening;trigger.setAttribute('aria-expanded',String(opening));});
+      trigger.addEventListener('click',function(e){e.stopPropagation();var opening=panel.hidden;panel.hidden=!opening;trigger.setAttribute('aria-expanded',String(opening));if(opening){fit();setTimeout(fit,60);setTimeout(fit,300);}});
       document.addEventListener('click',function(e){if(!panel.hidden&&!panel.contains(e.target)&&!trigger.contains(e.target))close()});
       document.addEventListener('keydown',function(e){if(e.key==='Escape')close()});
       panel.addEventListener('click',function(e){var button=e.target.closest('[data-bulk]');if(!button)return;var op=button.getAttribute('data-bulk');close();if(op==='download'){if(window.megaBulkDownload)megaBulkDownload();}else if(op==='copy'){var copy=document.getElementById('a-copy');if(copy)copy.click();}else if(typeof megaConfirmBulk==='function')megaConfirmBulk(op);});
@@ -8211,10 +8241,10 @@ html[data-bs-theme="dark"] #mega-folder-picker #mega-folder-entries > button:foc
  body .mega-mobile-heading strong{font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .mega-mobile-heading small{font-size:11px;opacity:.7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
  body .mega-mobile-menu:not([hidden]){display:flex;position:absolute;right:4px;top:49px;width:220px;max-height:calc(100dvh - 65px);overflow-y:auto;flex-direction:column;padding:5px;background:var(--bs-body-bg,#fff);border:1px solid var(--bs-border-color,#d5dce4);border-radius:9px;box-shadow:0 8px 26px #0003;z-index:1100}
- body .mega-mobile-menu a,body .mega-mobile-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:39px;padding:8px 10px;border:0;border-radius:5px;background:transparent;text-align:left;text-decoration:none;color:var(--bs-body-color,#222);font-size:13px}
+ body .mega-mobile-menu a,body .mega-mobile-menu button{display:flex;align-items:center;gap:10px;width:100%;min-height:39px;padding:8px 10px;border:0;border-radius:5px;background:transparent;text-align:left;text-decoration:none;color:var(--bs-body-color,#222);font-size:var(--bs-body-font-size,1rem)}
  body .mega-mobile-menu i{display:inline-flex;align-items:center;justify-content:center;flex:0 0 17px;width:17px;min-width:0;max-width:17px;overflow:visible;text-align:center;line-height:1}
  body .mega-mobile-menu a:active,body .mega-mobile-menu button:active{background:var(--bs-secondary-bg,#e7ebf0)}
- body .mega-mobile-menu .mega-mobile-selection-label{padding:6px 10px;font-weight:600;font-size:12px}
+ body .mega-mobile-menu .mega-mobile-selection-label{padding:6px 10px;font-weight:600;font-size:14px}
  body .mega-mobile-menu hr{margin:4px 6px;border-color:var(--bs-border-color,#ddd)}
  body #wrapper>form.pt-3{padding-top:3px!important}
  body .mega-view-controls{display:flex!important;align-items:center!important;flex-wrap:nowrap!important;gap:5px!important;padding:4px 5px!important;margin:0 0 5px!important;border:0!important;border-bottom:1px solid var(--bs-border-color,#ddd)!important;border-radius:0!important;box-shadow:none!important}
@@ -10238,7 +10268,9 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
       if(typeof options.onFail==='function')options.onFail();return;
      }
     }catch(err){}
-    var msg=options.failMessage||window.megaDownloadFailMessage;if(msg)window.alert(msg);
+    var msg=options.failMessage||window.megaDownloadFailMessage||'Download failed',detail='';
+    try{var b=frame.contentDocument&&frame.contentDocument.body;detail=((b&&(b.innerText||b.textContent))||'').replace(/\s+/g,' ').trim().slice(0,200);}catch(err){}
+    window.alert(detail?msg+'\n\n'+detail:msg);
     if(typeof options.onFail==='function')options.onFail();
    }
    function show(){showTimer=null;if(!done){shown=true;window.megaShowWorking(action);}}
@@ -10255,7 +10287,14 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
     else if(options.maxWait&&Date.now()-started>options.maxWait)finish();   // no signal: stop showing progress, let the download continue
     else if(Date.now()-started>30*60*1000)fail();
    },500);
-   frame.addEventListener('load',function(){if(!done&&!cookieSet())fail();});   // an attachment never fires load; an error page does
+   // An attachment normally fires no load event; a page from the server (error/redirect) does. A blank frame
+   // (about:blank: initial load, or a download the browser blocked) is not a server reply, so it is ignored.
+   frame.addEventListener('load',function(){
+    if(done||cookieSet())return;
+    var href='';try{href=frame.contentWindow.location.href;}catch(err){}
+    if(!href||href==='about:blank')return;
+    fail();
+   });
    form.submit();
    return true;
   },
