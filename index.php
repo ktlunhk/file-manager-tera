@@ -1667,6 +1667,7 @@ if (isset($_GET['dlfolder']) && ($_POST['token'] ?? $_GET['token'] ?? null) !== 
     } else {
         $dfError = mega_stream_zip_download($dfBase, array($dfName), $dfName . '.zip');   // ends the request on success
     }
+    mega_reopen_session();
     fm_set_msg(lng('Download failed') . ($dfError !== '' ? ': ' . $dfError : ''), 'error');
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
 }
@@ -1731,7 +1732,7 @@ if (isset($_POST['check_exists'], $_POST['paths']) && !FM_READONLY) {
 if (isset($_POST['bulkdl'], $_POST['token'])) {
     if (!verifyToken((string)$_POST['token'])) {
         fm_set_msg(lng('Invalid Token.'), 'error');
-        exit;
+        fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
     }
     $bdBase = rtrim(FM_ROOT_PATH, '/') . (FM_PATH !== '' ? '/' . FM_PATH : '');
     $bdError = '';
@@ -1756,6 +1757,7 @@ if (isset($_POST['bulkdl'], $_POST['token'])) {
         $bdZip = (count($bdNames) === 1 ? $bdNames[0] : 'archive_' . date('ymd_His')) . '.zip';
         $bdError = mega_stream_zip_download($bdBase, $bdNames, $bdZip);   // ends the request on success
     }
+    mega_reopen_session();
     fm_set_msg(lng('Download failed') . ($bdError !== '' ? ': ' . $bdError : ''), 'error');
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
 }
@@ -2041,6 +2043,17 @@ if (isset($_POST['group'], $_POST['token']) && (isset($_POST['zip']) || isset($_
         if (!$success) fm_set_msg(lng('Archive not created') . ': ' . $error, 'error');
     }
     fm_redirect(FM_SELF_URL . '?p=' . urlencode(FM_PATH));
+}
+
+/**
+ * Re-open the session after session_write_close(), so a flash message set with fm_set_msg() is really saved
+ * and shown on the next page (otherwise an error after staging would be lost and the user sees no reason).
+ */
+function mega_reopen_session()
+{
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        @session_start();
+    }
 }
 
 /**
@@ -10269,7 +10282,7 @@ body.mega-operation-busy .modal.show,body.mega-operation-busy .modal.in,body.meg
      }
     }catch(err){}
     var msg=options.failMessage||window.megaDownloadFailMessage||'Download failed',detail='';
-    try{var b=frame.contentDocument&&frame.contentDocument.body;detail=((b&&(b.innerText||b.textContent))||'').replace(/\s+/g,' ').trim().slice(0,200);}catch(err){}
+    try{var b=frame.contentDocument&&frame.contentDocument.body;detail=((b&&(b.innerText||b.textContent))||'').replace(/\s+/g,' ').trim();if(detail.length>200)detail='';}catch(err){}
     window.alert(detail?msg+'\n\n'+detail:msg);
     if(typeof options.onFail==='function')options.onFail();
    }
