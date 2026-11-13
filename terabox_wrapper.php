@@ -167,21 +167,43 @@ class TeraApi
             self::$lastError = 'link: ' . $e->getMessage();
             return false;
         }
-        return function ($start, $len) use ($c, $url) {
+        $total = (int)$n['s'];
+        return function ($start, $len) use ($c, $url, $total) {
             if ($len <= 0) return '';
             $buf = '';
             $status = 0;
+            $seen = 0;   // bytes already received when the server ignores Range and answers 200
+            $ranged = false;   // body already starts at $start (206, or a 200 that still honours Range)
             try {
                 $c->streamUrl($url, 'bytes=' . $start . '-' . ($start + $len - 1), false,
-                    function ($st, $h) use (&$status) { $status = $st; },
-                    function ($d) use (&$buf, $len) { $buf .= $d; return strlen($buf) < $len; });
+                    function ($st, $h) use (&$status, &$ranged, $total) {
+                        $status = $st;
+                        $cl = isset($h['content-length']) ? (int)$h['content-length'] : -1;
+                        // Some CDNs send the requested slice with status 200: a body shorter than the file is that slice.
+                        $ranged = ($st === 206) || isset($h['content-range']) || ($cl >= 0 && $total > 0 && $cl < $total);
+                    },
+                    function ($d) use (&$buf, &$ranged, &$seen, $start, $len) {
+                        if ($ranged) {
+                            $buf .= $d;
+                        } else {
+                            // HTTP 200: Range was ignored, the body starts at byte 0. Skip up to $start.
+                            $end = $seen + strlen($d);
+                            if ($end > $start) $buf .= substr($d, max(0, $start - $seen));
+                            $seen = $end;
+                        }
+                        return strlen($buf) < $len;
+                    }, 40);   // hard cap so a stalled CDN can never hang the archive page
             } catch (Throwable $e) {
                 self::log('range read failed: ' . $e->getMessage());
                 self::$lastError = 'read: ' . $e->getMessage();
                 return false;
             }
-            if ($status !== 206) { // server ignored Range: data would be wrong
-                self::$lastError = 'read: HTTP status ' . $status . ' instead of 206';
+            if ($status !== 206 && $status !== 200) {
+                self::$lastError = 'read: HTTP status ' . $status;
+                return false;
+            }
+            if (strlen($buf) < $len) {
+                self::$lastError = 'read: got ' . strlen($buf) . ' of ' . $len . ' bytes (HTTP ' . $status . ')';
                 return false;
             }
             return substr($buf, 0, $len);
