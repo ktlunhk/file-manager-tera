@@ -4,6 +4,10 @@
  * The file-manager UI is the one from the MEGA version; storage is TeraBox (terabox:// via terabox_wrapper.php).
  */
 
+/* ---- PHP errors ---- */
+// false hides PHP errors on the page, true shows them (for debugging).
+$error_reporting = false;
+
 /* ---- Sign-in (login.php) ---- */
 const TB_TOKEN_LOGIN_ENABLED = true; // true shows the "sign in with ndus session token" form
 const TB_DEBUG = false;               // true shows detailed upstream errors
