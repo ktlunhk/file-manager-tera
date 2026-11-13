@@ -469,7 +469,7 @@ class TeraBoxAuth
      * $sendHeaders(int $status, array $headers) is called once, just before the first body byte;
      * $sendBody(string $chunk): bool returns false to stop (visitor went away).
      */
-    public function streamUrl(string $url, string $range, bool $headOnly, callable $sendHeaders, callable $sendBody): void
+    public function streamUrl(string $url, string $range, bool $headOnly, callable $sendHeaders, callable $sendBody, int $maxSeconds = 0): void
     {
         for ($hop = 0; $hop <= 6; $hop++) {
             $p = parse_url($url);
@@ -486,7 +486,7 @@ class TeraBoxAuth
             $ch = curl_init($url);
             $opts = [
                 CURLOPT_HTTPHEADER => $headers, CURLOPT_FOLLOWLOCATION => false, CURLOPT_RETURNTRANSFER => false,
-                CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => 0, CURLOPT_LOW_SPEED_LIMIT => 1024, CURLOPT_LOW_SPEED_TIME => 60,
+                CURLOPT_CONNECTTIMEOUT => 15, CURLOPT_TIMEOUT => max(0, $maxSeconds), CURLOPT_LOW_SPEED_LIMIT => 1024, CURLOPT_LOW_SPEED_TIME => 60,
                 CURLOPT_SSL_VERIFYPEER => true, CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
                 CURLOPT_HEADERFUNCTION => function ($c, string $line) use (&$status, &$loc, &$resp): int {
                     if (preg_match('#^HTTP/\S+\s+(\d{3})#', $line, $m)) { $status = (int)$m[1]; $loc = ''; $resp = []; }
