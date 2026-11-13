@@ -393,6 +393,30 @@ class TeraBoxAuth
         return $origin . rtrim(dirname($p['path'] ?? '/'), '/') . '/' . $loc;
     }
 
+    /** TeraBox's own domains: download links are signed by their API, so the local DNS check is skipped. */
+    private const TRUSTED_DL_RE = '/(?:^|\.)(?:terabox\.(?:com|app|link)|1024terabox\.com|1024tera\.com|freeterabox\.com|teraboxcdn\.com|4funbox\.com|nephobox\.com)$/i';
+
+    /**
+     * Refuse download hosts that point at private/reserved addresses (SSRF guard).
+     * TeraBox's own domains are trusted, because some phones/VPNs/private-DNS setups make PHP's
+     * resolver return 0.0.0.0, 198.18.x.x or nothing at all even though curl connects fine.
+     */
+    private static function assertPublicHost(string $host): void
+    {
+        $flags = FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE;
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (filter_var($host, FILTER_VALIDATE_IP, $flags) === false) {
+                throw new RuntimeException('Download host is not a public address (ip=' . $host . ').');
+            }
+            return;
+        }
+        if (preg_match(self::TRUSTED_DL_RE, $host)) return;
+        $ip = gethostbyname($host);
+        if ($ip === $host || filter_var($ip, FILTER_VALIDATE_IP, $flags) === false) {
+            throw new RuntimeException('Download host is not a public address (host=' . $host . ', ip=' . $ip . ').');
+        }
+    }
+
     /** Stream a dlink to a local file. HTTPS only, public hosts only, cookies only to TeraBox hosts. */
     public function downloadUrlTo(string $url, string $dest): void
     {
@@ -405,14 +429,7 @@ class TeraBoxAuth
                 if (!is_array($p) || ($p['scheme'] ?? '') !== 'https' || $host === '' || isset($p['user']) || isset($p['pass'])) {
                     throw new RuntimeException('Refusing a non-HTTPS download link.');
                 }
-                if (!filter_var($host, FILTER_VALIDATE_IP)) {
-                    $ip = gethostbyname($host);
-                    if ($ip === $host || filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                        throw new RuntimeException('Download host is not a public address.');
-                    }
-                } elseif (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                    throw new RuntimeException('Download host is not a public address.');
-                }
+                self::assertPublicHost($host);
                 $headers = ['User-Agent: ' . self::UA];
                 if (preg_match(self::HOST_RE, $host)) $headers[] = 'Cookie: ' . $this->cookie;
                 $loc = ''; $status = 0;
@@ -460,11 +477,7 @@ class TeraBoxAuth
             if (!is_array($p) || ($p['scheme'] ?? '') !== 'https' || $host === '' || isset($p['user']) || isset($p['pass'])) {
                 throw new RuntimeException('Refusing a non-HTTPS download link.');
             }
-            $ip = filter_var($host, FILTER_VALIDATE_IP) ? $host : gethostbyname($host);
-            if ($ip === $host && !filter_var($host, FILTER_VALIDATE_IP)) throw new RuntimeException('Download host is not a public address.');
-            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-                throw new RuntimeException('Download host is not a public address.');
-            }
+            self::assertPublicHost($host);
             $headers = ['User-Agent: ' . self::UA];
             if (preg_match(self::HOST_RE, $host)) $headers[] = 'Cookie: ' . $this->cookie;
             if ($range !== '' && preg_match('/^bytes=\d*-\d*$/D', $range)) $headers[] = 'Range: ' . $range;
