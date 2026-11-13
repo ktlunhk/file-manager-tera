@@ -464,7 +464,8 @@ $lang = isset($cfg->data['lang']) ? $cfg->data['lang'] : 'en';
 $show_hidden_files = isset($cfg->data['show_hidden']) ? $cfg->data['show_hidden'] : true;
 
 // PHP error reporting - false = Turns off Errors, true = Turns on Errors
-$report_errors = isset($cfg->data['error_reporting']) ? $cfg->data['error_reporting'] : true;
+// Set $error_reporting in config.php (defaults to false when missing)
+$report_errors = isset($error_reporting) ? (bool)$error_reporting : false;
 
 // Hide Permissions and Owner cols in file-listing
 $hide_Cols = true; // TeraBox has no meaningful POSIX owner/permissions columns
@@ -755,6 +756,9 @@ if (isset($mega_pref_values['show_hidden']) && is_bool($mega_pref_values['show_h
 // Layout follows an explicit browser preference; old preferences default to Auto.
 $mega_view_mode = isset($mega_pref_values['view_mode']) && in_array($mega_pref_values['view_mode'], array('auto', 'mobile', 'desktop'), true) ? $mega_pref_values['view_mode'] : 'auto';
 define('FM_VIEW_MODE', $mega_view_mode);
+// Date format preference: 'system' = the server default ($datetime_format), 'us' or 'uk'.
+$mega_date_format = isset($mega_pref_values['date_format']) && in_array($mega_pref_values['date_format'], array('system', 'us', 'uk'), true) ? $mega_pref_values['date_format'] : 'system';
+define('FM_DATE_FORMAT_MODE', $mega_date_format);
 // TeraBox deletion is a per-browser account preference; default to recoverable deletion.
 define('FM_DELETE_MODE', isset($mega_pref_values['delete_mode']) && $mega_pref_values['delete_mode']==='permanent' ? 'permanent' : 'rubbish');
 // Browser identity is a layout hint only; explicit user choices take priority.
@@ -849,7 +853,11 @@ define('FM_EDIT_FILE', $edit_files);
 defined('FM_ICONV_INPUT_ENC') || define('FM_ICONV_INPUT_ENC', $iconv_input_encoding);
 defined('FM_USE_HIGHLIGHTJS') || define('FM_USE_HIGHLIGHTJS', $use_highlightjs);
 defined('FM_HIGHLIGHTJS_STYLE') || define('FM_HIGHLIGHTJS_STYLE', $highlightjs_style);
-defined('FM_DATETIME_FORMAT') || define('FM_DATETIME_FORMAT', $datetime_format);
+if (!defined('FM_DATETIME_FORMAT')) {
+    if (FM_DATE_FORMAT_MODE === 'us') define('FM_DATETIME_FORMAT', 'm/d/Y g:i A');   // 11/13/2026 7:28 PM
+    elseif (FM_DATE_FORMAT_MODE === 'uk') define('FM_DATETIME_FORMAT', 'd/m/Y H:i'); // 13/11/2026 19:28
+    else define('FM_DATETIME_FORMAT', $datetime_format);
+}
 
 unset($p, $use_auth, $iconv_input_encoding, $use_highlightjs, $highlightjs_style);
 
@@ -3195,6 +3203,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                             </select>
                         </div>
                     </div>
+<!---
                     <div class="mt-3 mb-3 row ">
                         <label for="js-error-report" class="col-sm-3 col-form-label"><?php echo lng('ErrorReporting') ?></label>
                         <div class="col-sm-9">
@@ -3204,7 +3213,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                             </div>
                         </div>
                     </div>
-
+-->
                     <div class="mb-3 row">
                         <label for="js-show-hidden" class="col-sm-3 col-form-label"><?php echo lng('ShowHiddenFiles') ?></label>
                         <div class="col-sm-9">
@@ -3218,6 +3227,7 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                         <label for="js-3-0" class="col-sm-3 col-form-label"><?php echo lng('Theme') ?></label>
                         <div class="col-sm-5">
                             <select class="form-select w-100 text-capitalize" id="js-3-0" name="js-theme-3">
+                                <option value='auto' <?php if ($theme == "auto") { echo "selected"; } ?>><?php echo lng('Auto (browser detection)') ?></option>
                                 <option value='light' <?php if ($theme == "light") {
                                                             echo "selected";
                                                         } ?>>
@@ -3228,7 +3238,6 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                                                         } ?>>
                                     <?php echo lng('dark') ?>
                                 </option>
-                                <option value='auto' <?php if ($theme == "auto") { echo "selected"; } ?>><?php echo lng('Auto (browser detection)') ?></option>
                             </select>
                         </div>
                     </div>
@@ -3242,6 +3251,17 @@ if (isset($_GET['settings']) && !FM_READONLY) {
                             <select class="form-select w-100" id="js-view-mode" name="js-view-mode">
                                 <?php foreach (array('auto' => 'Auto (browser detection)', 'mobile' => 'Mobile', 'desktop' => 'Desktop') as $value => $label): ?>
                                 <option value="<?php echo $value; ?>" <?php echo FM_VIEW_MODE === $value ? 'selected' : ''; ?>><?php echo lng($label); ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 row">
+                        <label for="js-date-format" class="col-sm-3 col-form-label"><?php echo lng('Date format'); ?></label>
+                        <div class="col-sm-5">
+                            <select class="form-select w-100" id="js-date-format" name="js-date-format">
+                                <?php foreach (array('system' => 'System', 'us' => 'US (MM/DD/YYYY, 12-hour)', 'uk' => 'UK (DD/MM/YYYY, 24-hour)') as $value => $label): ?>
+                                <option value="<?php echo $value; ?>" <?php echo FM_DATE_FORMAT_MODE === $value ? 'selected' : ''; ?>><?php echo lng($label); ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -3432,6 +3452,46 @@ function mega_legacy_office_preview($source, $ext, $bytes) {
     }
 }
 
+// Lazy archive listing: the archive detail page opens at once and fetches the entries from here.
+if (isset($_GET['zipinfo']) && strpos($path, 'terabox://') === 0) {
+    $zn = str_replace('/', '', fm_clean_path((string) $_GET['zipinfo'], false));
+    $zp = $path . '/' . $zn;
+    // Do not hold the session lock (single-threaded / low-worker servers would queue every other request behind us).
+    if (session_status() === PHP_SESSION_ACTIVE) session_write_close();
+    @set_time_limit(120);
+    @ini_set('display_errors', '0');
+    while (ob_get_level() > 0) @ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: no-store');
+    // A fatal error / timeout must still reach the page as JSON, not as an HTML error or an empty body.
+    $zipDone = false;
+    register_shutdown_function(function () use (&$zipDone) {
+        if ($zipDone) return;
+        $err = error_get_last();
+        while (ob_get_level() > 0) @ob_end_clean();
+        if (!headers_sent()) { http_response_code(500); header('Content-Type: application/json; charset=utf-8'); }
+        $why = $err ? ($err['message'] . ' @' . basename($err['file']) . ':' . $err['line']) : 'request ended unexpectedly';
+        error_log('[tbzip] fatal: ' . $why);
+        echo json_encode(array('ok' => false, 'stats' => '', 'list' => '<p>Error while fetching archive info</p><p class="text-muted small">' . htmlspecialchars($why, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</p>'), JSON_INVALID_UTF8_SUBSTITUTE);
+    });
+    $zext = strtolower(pathinfo($zn, PATHINFO_EXTENSION));
+    if ($zn === '' || ($zext !== 'zip' && $zext !== 'tar') || !is_file($zp)) {
+        $zipDone = true;
+        http_response_code(404);
+        echo json_encode(array('ok' => false, 'stats' => '', 'list' => '<p>' . fm_enc(lng('File not found')) . '</p>'), JSON_INVALID_UTF8_SUBSTITUTE);
+        exit;
+    }
+    $zipT0 = microtime(true);
+    error_log('[tbzip] request start: ' . $zp);
+    ob_start();   // swallow stray warnings/notices so the JSON stays valid
+    $zipRes = fm_get_zip_info($zp, $zext);
+    $zipStray = ob_get_clean();
+    $zipDone = true;
+    error_log('[tbzip] request done in ' . round(microtime(true) - $zipT0, 2) . 's: ' . ($zipRes === false ? 'FAILED (' . (isset($GLOBALS['fm_zip_reason']) ? $GLOBALS['fm_zip_reason'] : 'no reason') . ')' : count($zipRes) . ' entries') . ($zipStray !== '' ? ' stray-output=' . substr(preg_replace('/\s+/', ' ', $zipStray), 0, 200) : ''));
+    echo json_encode(fm_zip_fragments($zipRes), JSON_INVALID_UTF8_SUBSTITUTE);
+    exit;
+}
+
 // file viewer
 if (isset($_GET['view'])) {
     $file = $_GET['view'];
@@ -3472,6 +3532,7 @@ if (isset($_GET['view'])) {
 
     $view_title = 'File';
     $filenames = false; // for zip
+    $zip_lazy = false;  // cloud zip: entries are loaded after the page renders
     $content = ''; // for text
     $online_viewer = strtolower(FM_DOC_VIEWER);
 
@@ -3484,7 +3545,9 @@ if (isset($_GET['view'])) {
     } elseif ($ext == 'zip' || $ext == 'tar') {
         $is_zip = true;
         $view_title = 'Archive';
-        $filenames = fm_get_zip_info($file_path, $ext);
+        // Cloud archives are listed after the page has rendered (see ?zipinfo=), so the page opens at once.
+        $zip_lazy = (($ext === 'zip' || $ext === 'tar') && strpos($path, 'terabox://') === 0);
+        $filenames = $zip_lazy ? false : fm_get_zip_info($file_path, $ext);
     } elseif (in_array($ext, fm_get_image_exts())) {
         $is_image = true;
         $view_title = 'Image';
@@ -3511,6 +3574,10 @@ if (isset($_GET['view'])) {
                 <li class="list-group-item"><strong><?php echo lng('MIME-type') ?>:</strong> <?php echo $mime_type ?></li>
                 <?php
                 // ZIP info
+                if ($zip_lazy) {
+                    if (!headers_sent()) { header('Cache-Control: no-store, no-cache, must-revalidate'); header('Pragma: no-cache'); }
+                    echo '<li class="list-group-item text-muted" id="zip-stats-slot">' . lng('Loading archive contents') . '...</li>';
+                }
                 if (($is_zip || $is_gzip) && $filenames !== false) {
                     $total_files = 0;
                     $total_comp = 0;
@@ -3639,6 +3706,12 @@ if (isset($_GET['view'])) {
 <style id="mega-v106-extract-icons">
 .mega-preview-actions .mega-unzip-form > button.btn {display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;}
 .mega-preview-actions .mega-unzip-form .mega-extract-icon {display:inline-block!important;flex:0 0 16px!important;width:16px!important;height:16px!important;vertical-align:middle!important;}
+/* Dark theme: the UnZip row must follow the same palette as Cancel / Delete / Download (the light colours above are hard-coded). */
+html body.theme-dark .mega-preview-actions > form.mega-unzip-form > button.btn,
+html body.theme-dark .mega-preview-actions > form.mega-unzip-form > .btn{background:#37414b!important;color:#f1f5f9!important;border:1px solid #596674!important}
+html body.theme-dark .mega-preview-actions > form.mega-unzip-form > button.btn:hover,
+html body.theme-dark .mega-preview-actions > form.mega-unzip-form > button.btn:focus{background:#465362!important;color:#f1f5f9!important}
+html body.theme-dark .mega-preview-actions > form.mega-unzip-form .mega-extract-icon{color:#f1f5f9!important;stroke:currentColor!important}
 </style>
 <div class="mega-preview-actions" role="group">
                 <a class="btn mega-preview-cancel" href="?p=<?php echo urlencode(FM_PATH) ?>"><i class="fa fa-times" aria-hidden="true"></i> <?php echo lng('Cancel') ?></a>
@@ -3651,7 +3724,7 @@ if (isset($_GET['view'])) {
                 </form>
                 <?php
                 // ZIP actions
-                if (!FM_READONLY && ($is_zip || $is_gzip) && $filenames !== false) {
+                if (!FM_READONLY && ($is_zip || $is_gzip) && ($filenames !== false || $zip_lazy)) {
                     $zip_name = pathinfo($file_path, PATHINFO_FILENAME);
                     $is_tar_action = strtolower(pathinfo($file, PATHINFO_EXTENSION)) === 'tar';
                 ?>
@@ -3783,7 +3856,7 @@ body.theme-dark .mega-preview-content svg {filter:none;}
 }
 </style>
 
-            <?php fm_render_readonly_preview(compact('content','ext','file','file_path','file_url','filenames','filesize_raw','is_audio','is_image','is_onlineViewer','is_text','is_video','is_zip','online_viewer','path')); ?>
+            <?php fm_render_readonly_preview(compact('content','ext','file','file_path','file_url','filenames','filesize_raw','is_audio','is_image','is_onlineViewer','is_text','is_video','is_zip','zip_lazy','online_viewer','path')); ?>
         </div>
     </div>
 <?php
@@ -5349,6 +5422,130 @@ function fm_zip_fail($why)
     return false;
 }
 
+/**
+ * List an uncompressed tar through a ranged reader callable($start,$len) without downloading it:
+ * only the 512-byte headers are read (through a 256 KiB read-ahead window), data blocks are skipped.
+ * Understands ustar prefixes, GNU long names (L) and pax path/size records (x).
+ * Returns the fm_get_zip_info() array format or false.
+ */
+function fm_tar_list_via_ranges($read, $size)
+{
+    try {
+        if ($size < 512) return fm_zip_fail('file too small for a tar archive');
+        $win = 256 * 1024;
+        $wstart = -1;
+        $wbuf = '';
+        $get = function ($off, $len) use ($read, $size, &$wstart, &$wbuf, $win) {
+            if ($len <= 0) return '';
+            if ($off < 0 || $off + $len > $size) return false;
+            if ($wstart >= 0 && $off >= $wstart && $off + $len <= $wstart + strlen($wbuf)) {
+                return substr($wbuf, $off - $wstart, $len);
+            }
+            $n = min(max($len, $win), $size - $off);
+            $b = $read($off, $n);
+            if ($b === false || strlen($b) !== $n) return false;
+            $wstart = $off;
+            $wbuf = $b;
+            return substr($b, 0, $len);
+        };
+        $files = array();
+        $off = 0;
+        $longName = null;
+        $paxPath = null;
+        $paxSize = null;
+        $first = true;
+        $t0 = microtime(true);
+        while ($off + 512 <= $size && count($files) < 1000) {
+            if (microtime(true) - $t0 > 80) break;           // keep what we have rather than hang
+            $h = $get($off, 512);
+            if ($h === false) return fm_zip_fail('tar header read failed at offset ' . $off);
+            if (trim($h, "\0") === '') break;                 // end-of-archive marker
+            $sum = array_sum(unpack('C*', substr($h, 0, 148) . '        ' . substr($h, 156)));
+            $stored = octdec(trim(substr($h, 148, 8), " \0"));
+            if ($sum !== $stored) {
+                if ($first) return fm_zip_fail('not a valid (uncompressed) tar archive');
+                break;
+            }
+            $first = false;
+            if ((ord($h[124]) & 0x80) !== 0) {               // base-256 size (files over 8 GiB)
+                $sz = 0;
+                for ($i = 125; $i < 136; $i++) $sz = $sz * 256 + ord($h[$i]);
+            } else {
+                $sz = (int) octdec(trim(substr($h, 124, 12), " \0"));
+            }
+            $type = $h[156];
+            $name = rtrim(substr($h, 0, 100), "\0");
+            if (substr($h, 257, 5) === 'ustar') {
+                $prefix = rtrim(substr($h, 345, 155), "\0");
+                if ($prefix !== '') $name = $prefix . '/' . $name;
+            }
+            $dataLen = (int) (ceil($sz / 512) * 512);
+            if ($type === 'L') {                              // GNU long file name
+                $d = $get($off + 512, min($sz, 8192));
+                if ($d === false) return fm_zip_fail('tar long-name read failed');
+                $longName = rtrim($d, "\0");
+                $off += 512 + $dataLen;
+                continue;
+            }
+            if ($type === 'x') {                              // pax extended header for the next entry
+                $d = $get($off + 512, min($sz, 65536));
+                if ($d === false) return fm_zip_fail('tar pax header read failed');
+                $q = 0;
+                while ($q < strlen($d) && ($sp = strpos($d, ' ', $q)) !== false) {
+                    $rl = (int) substr($d, $q, $sp - $q);
+                    if ($rl <= 0) break;
+                    $rec = rtrim(substr($d, $sp + 1, $rl - ($sp - $q) - 1), "\n");
+                    $eq = strpos($rec, '=');
+                    if ($eq !== false) {
+                        $k = substr($rec, 0, $eq);
+                        $v = substr($rec, $eq + 1);
+                        if ($k === 'path') $paxPath = $v;
+                        elseif ($k === 'size') $paxSize = (int) $v;
+                    }
+                    $q += $rl;
+                }
+                $off += 512 + $dataLen;
+                continue;
+            }
+            if ($type === 'g' || $type === 'K') {             // global pax header / GNU long link name
+                $off += 512 + $dataLen;
+                continue;
+            }
+            if ($longName !== null) $name = $longName;
+            elseif ($paxPath !== null) $name = $paxPath;
+            if ($paxSize !== null) { $sz = $paxSize; $dataLen = (int) (ceil($sz / 512) * 512); }
+            $longName = $paxPath = $paxSize = null;
+            $isDir = ($type === '5') || substr($name, -1) === '/';
+            if ($isDir && substr($name, -1) !== '/') $name .= '/';
+            $files[] = array(
+                'name' => $name,
+                'filesize' => $isDir ? 0 : (int) $sz,
+                'compressed_size' => $isDir ? 0 : (int) $sz,
+                'folder' => $isDir
+            );
+            $off += 512 + (($type === '1' || $type === '2') ? 0 : $dataLen);   // links carry no data
+        }
+        return $files;
+    } catch (Throwable $e) {
+        error_log('Remote tar listing failed: ' . $e->getMessage());
+        return fm_zip_fail('exception: ' . $e->getMessage());
+    }
+}
+
+function fm_get_remote_tar_info($path)
+{
+    try {
+        $node = TeraFS::node($path);
+        if (!$node || (int)$node['t'] !== 0) return fm_zip_fail('file not found in TeraBox listing');
+        $read = TeraApi::rangeReader($node['h']);
+        if (!$read) return fm_zip_fail('no range reader (' . TeraApi::$lastError . ')');
+        return fm_tar_list_via_ranges($read, (int)$node['s']);
+    } catch (Throwable $e) {
+        error_log('TeraBox remote tar listing failed: ' . $e->getMessage());
+        return fm_zip_fail('exception: ' . $e->getMessage());
+    }
+}
+
 function fm_get_remote_zip_info($path)
 {
     try {
@@ -5433,6 +5630,39 @@ function fm_get_remote_zip_info($path)
 }
 
 /**
+ * HTML fragments for the archive page: summary rows + entry list (used by ?zipinfo=).
+ * @return array{ok:bool,stats:string,list:string}
+ */
+function fm_zip_fragments($filenames)
+{
+    if ($filenames === false) {
+        $html = '<p>' . lng('Error while fetching archive info') . '</p>';
+        if (!empty($GLOBALS['fm_zip_reason'])) $html .= '<p class="text-muted small">' . fm_enc($GLOBALS['fm_zip_reason']) . '</p>';
+        return array('ok' => false, 'stats' => '', 'list' => $html);
+    }
+    $total_files = 0;
+    $total_comp = 0;
+    $total_uncomp = 0;
+    $list = '<code class="maxheight">';
+    foreach ($filenames as $fn) {
+        if (!$fn['folder']) $total_files++;
+        $total_comp += $fn['compressed_size'];
+        $total_uncomp += $fn['filesize'];
+        if ($fn['folder']) {
+            $list .= '<b>' . fm_enc($fn['name']) . '</b><br>';
+        } else {
+            $list .= fm_enc($fn['name']) . ' (' . fm_get_filesize($fn['filesize']) . ')<br>';
+        }
+    }
+    $list .= '</code>';
+    $stats = '<li class="list-group-item">' . lng('Files in archive') . ': ' . $total_files . '</li>'
+        . '<li class="list-group-item">' . lng('Total size') . ': ' . fm_get_filesize($total_uncomp) . '</li>'
+        . '<li class="list-group-item"> ' . lng('Size in archive') . ': ' . fm_get_filesize($total_comp) . '</li>'
+        . '<li class="list-group-item">' . lng('Compression') . ': ' . round(($total_comp / max($total_uncomp, 1)) * 100) . '%</li>';
+    return array('ok' => true, 'stats' => $stats, 'list' => $list);
+}
+
+/**
  * Get info about zip archive
  * @param string $path
  * @return array|bool
@@ -5446,13 +5676,15 @@ function fm_get_zip_info($path, $ext)
     $local = $path;
     $temp = false;
     if (strpos($path, 'terabox://') === 0) {
-        if ($ext === 'zip') {
-            // Fast path: read only the zip central directory with HTTP Range requests.
-            $remote = fm_get_remote_zip_info($path);
+        if ($ext === 'zip' || $ext === 'tar') {
+            // Fast path: zip -> read only the central directory; tar -> read only the headers (HTTP Range requests).
+            $remote = $ext === 'zip' ? fm_get_remote_zip_info($path) : fm_get_remote_tar_info($path);
             if ($remote !== false) return $remote;
         }
         $size = @filesize($path);
-        if ($size === false || $size > $maxArchive) return false;
+        if ($size === false || $size > $maxArchive) {
+            return fm_zip_fail('ranged listing failed and the archive is too large to download for a fallback (' . ($size === false ? 'unknown size' : round($size / 1048576, 1) . ' MB') . ')');
+        }
         $temp = @tempnam(sys_get_temp_dir(), 'mega_arc_');
         if ($temp === false) return false;
         $src = @fopen($path, 'rb');
@@ -9070,12 +9302,14 @@ html body .fm-path-links .mega-desktop-parent .fa{font-size:1.15em!important;lin
                         lang: document.getElementById('js-language').value,
                         theme: document.getElementById('js-3-0').value,
                         view_mode: document.getElementById('js-view-mode').value,
+                        date_format: document.getElementById('js-date-format') ? document.getElementById('js-date-format').value : 'system',
                         delete_mode: document.getElementById('js-delete-mode') ? document.getElementById('js-delete-mode').value : 'rubbish',
                         show_hidden: document.getElementById('js-show-hidden').checked,
                         hide_Cols: true
                     };
                     if (prefs.theme !== 'dark' && prefs.theme !== 'light' && prefs.theme !== 'auto') throw new Error(<?php echo json_encode(lng('Invalid theme')); ?>);
                     if (['auto', 'mobile', 'desktop'].indexOf(prefs.view_mode) < 0) throw new Error('Invalid layout');
+                    if (['system', 'us', 'uk'].indexOf(prefs.date_format) < 0) throw new Error('Invalid date format');
                     window.localStorage.setItem(window.megaPrefsStorageKey, JSON.stringify(prefs));
                     document.cookie = window.megaPrefsCookieName + '=' + encodeURIComponent(JSON.stringify(prefs)) +
                         '; path=' + window.megaPrefsCookiePath + '; max-age=31536000; SameSite=Lax' +
@@ -10833,6 +11067,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         $tr['en']['Are you sure to rename?']                     = 'Are you sure to rename?';
         $tr['en']['Are you sure to']                                = 'Are you sure to';
         $tr['en']['Date Modified']                                  = 'Date Modified';
+        $tr['en']['Date format']                                    = 'Date format';
+        $tr['en']['System']                                         = 'System';
         $tr['en']['File size']                                      = 'File size';
         $tr['en']['MIME-type']                                      = 'MIME-type';
         $tr['en']['a files']                                        = 'files';
@@ -12125,7 +12361,51 @@ function fm_render_readonly_preview($context) {
                     }
                 } elseif ($is_zip) {
                     // ZIP content
-                    if ($filenames !== false) {
+                    if ($zip_lazy) {
+                        $zip_url = '?p=' . rawurlencode(FM_PATH) . '&zipinfo=' . rawurlencode($file);
+                        echo '<div id="zip-entries"></div>';   // filled by the script below; the "Loading" text lives in the detail card
+                        ?>
+                        <script>
+                        (function () {
+                            var box = document.getElementById('zip-entries'), slot = document.getElementById('zip-stats-slot');
+                            var ctl = window.AbortController ? new AbortController() : null;
+                            var timer = ctl ? setTimeout(function () { ctl.abort(); }, 100000) : 0;   // never spin forever
+                            function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]; }); }
+                            function fail(why) {
+                                if (box) box.innerHTML = '<p>Error while fetching archive info</p>' + (why ? '<p class="text-muted small">' + esc(why) + '</p>' : '');
+                                if (slot) slot.remove();
+                            }
+                            console.log('[zipinfo] start');
+                            var t0 = Date.now();
+                            fetch(<?php echo json_encode($zip_url, JSON_HEX_TAG | JSON_HEX_AMP); ?> + '&_=' + Date.now(), {credentials: 'same-origin', headers: {'Accept': 'application/json'}, signal: ctl ? ctl.signal : undefined})
+                                .then(function (r) {
+                                    return r.text().then(function (t) {
+                                        var d;
+                                        try { d = JSON.parse(t); } catch (e) {
+                                            throw new Error('HTTP ' + r.status + ', not JSON: ' + t.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300));
+                                        }
+                                        return d;
+                                    });
+                                })
+                                .then(function (d) {
+                                    clearTimeout(timer);
+                                    console.log('[zipinfo] done in ' + (Date.now() - t0) + ' ms, ok=' + d.ok);
+                                    if (slot) { if (d.stats) slot.insertAdjacentHTML('afterend', d.stats); }
+                                    document.querySelectorAll('#zip-stats-slot').forEach(function (e) { e.remove(); });
+                                    if (box) box.innerHTML = d.list;
+                                    if (d.ok) document.querySelectorAll('[data-zip-lazy]').forEach(function (e) {
+                                        e.style.removeProperty('display'); e.removeAttribute('data-zip-lazy');
+                                    });
+                                })
+                                .catch(function (e) {
+                                    clearTimeout(timer);
+                                    console.log('[zipinfo] failed after ' + (Date.now() - t0) + ' ms', e);
+                                    fail(e && e.name === 'AbortError' ? 'Timed out after 100 s waiting for the server' : (e && e.message));
+                                });
+                        })();
+                        </script>
+                        <?php
+                    } elseif ($filenames !== false) {
                         echo '<code class="maxheight">';
                         foreach ($filenames as $fn) {
                             if ($fn['folder']) {
