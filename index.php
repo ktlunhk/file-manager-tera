@@ -6893,6 +6893,21 @@ function fm_show_nav_path($path)
       window.megaMobileUpdateMenu=function(count){var selected=panel.querySelector('.mega-mobile-selected-actions');if(selected){selected.hidden=count===0;selected.querySelector('.mega-mobile-selection-label').textContent=count+' '+<?php echo json_encode(html_entity_decode(lng('selected'), ENT_QUOTES, 'UTF-8'), JSON_UNESCAPED_UNICODE | JSON_HEX_TAG); ?>;}};
     })();
     </script>
+    <script id="mega-single-menu-script">
+    // Only one menu may be open at a time: opening the header menu, a row's action menu or the sort menu closes the others.
+    (function(){
+      if(window.megaSingleMenu)return;window.megaSingleMenu=true;
+      function closeHeader(){var p=document.getElementById('mega-mobile-menu'),t=document.querySelector('.mega-mobile-menu-trigger');if(p&&!p.hidden)p.hidden=true;if(t)t.setAttribute('aria-expanded','false');}
+      function closeRows(){if(window.megaCloseRowMenus)window.megaCloseRowMenus();}
+      function closeSort(){var m=document.getElementById('mega-sort-custom-menu'),t=document.getElementById('mega-sort-custom-trigger');if(m&&!m.hidden)m.hidden=true;if(t)t.setAttribute('aria-expanded','false');}
+      document.addEventListener('click',function(e){
+        var t=e.target;if(!t||!t.closest)return;
+        if(t.closest('.mega-mobile-menu-trigger')){closeRows();closeSort();}
+        else if(t.closest('.mega-row-more')){closeHeader();closeSort();}
+        else if(t.closest('#mega-sort-custom-trigger')){closeHeader();closeRows();}
+      },true);
+    })();
+    </script>
 <?php
 }
 
