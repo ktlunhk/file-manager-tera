@@ -2849,7 +2849,6 @@ function fm_mega_folder_picker_ui($initialPath, $mode, $copySource = '') {
     <?php
 }
 ?>
-
 <?php
 // Route row-level Copy/Move through the same bulk Copy/Move screen.
 // The row link carries a single source path; the shared form carries the
@@ -5338,19 +5337,122 @@ function fm_get_filesize($size)
 }
 
 /**
+ * List a zip stored on TeraBox without downloading it: fetch the end of the file,
+ * locate the End Of Central Directory record, then fetch only the central directory.
+ * Supports ZIP64. Returns the same array format as fm_get_zip_info() or false.
+ */
+/** Remember why archive listing failed (shown on the archive page) and log it. */
+function fm_zip_fail($why)
+{
+    $GLOBALS['fm_zip_reason'] = $why;
+    error_log('[tbzip] ' . $why);
+    return false;
+}
+
+function fm_get_remote_zip_info($path)
+{
+    try {
+        $node = TeraFS::node($path);
+        if (!$node || (int)$node['t'] !== 0) return fm_zip_fail('file not found in TeraBox listing');
+        $size = (int)$node['s'];
+        if ($size < 22) return fm_zip_fail('file size too small');
+        $read = TeraApi::rangeReader($node['h']);
+        if (!$read) return fm_zip_fail('no range reader (' . TeraApi::$lastError . ')');
+
+        // 1) tail: EOCD (22 bytes + up to 65535 comment) plus room for ZIP64 locator
+        $tailLen = min($size, 65535 + 22 + 20);
+        $tailStart = $size - $tailLen;
+        $tail = $read($tailStart, $tailLen);
+        if ($tail === false || strlen($tail) !== $tailLen) return fm_zip_fail('tail read failed (' . TeraApi::$lastError . ')');
+        $pos = strrpos($tail, "PK\x05\x06");
+        if ($pos === false) return fm_zip_fail('no end-of-central-directory');
+        $e = unpack('vdisk/vcddisk/ventries_disk/ventries/Vcdsize/Vcdoffset/vcomment', substr($tail, $pos + 4, 18));
+        $entries = $e['entries'];
+        $cdsize = $e['cdsize'];
+        $cdoffset = $e['cdoffset'];
+
+        // 2) ZIP64
+        if ($entries === 0xFFFF || $cdsize === 0xFFFFFFFF || $cdoffset === 0xFFFFFFFF) {
+            if ($pos < 20 || substr($tail, $pos - 20, 4) !== "PK\x06\x07") return fm_zip_fail('zip64 locator missing');
+            $loc = unpack('Vdisk/Poff', substr($tail, $pos - 16, 12));
+            $z64 = $read($loc['off'], 56);
+            if ($z64 === false || strlen($z64) < 56 || substr($z64, 0, 4) !== "PK\x06\x06") return fm_zip_fail('zip64 record unreadable');
+            $z = unpack('Pentries/Pcdsize/Pcdoffset', substr($z64, 32, 24));
+            $entries = $z['entries'];
+            $cdsize = $z['cdsize'];
+            $cdoffset = $z['cdoffset'];
+        }
+        if ($cdoffset < 0 || $cdsize <= 0 || $cdoffset + $cdsize > $size) return fm_zip_fail('bad central directory offset');
+
+        // 3) central directory (cap how much we read; we only list 1000 entries anyway)
+        $cdRead = min($cdsize, 8 * 1024 * 1024);
+        $cd = $read($cdoffset, $cdRead);
+        if ($cd === false || strlen($cd) !== $cdRead) return fm_zip_fail('central directory read failed (' . TeraApi::$lastError . ')');
+
+        $files = array();
+        $p = 0;
+        $n = strlen($cd);
+        while ($p + 46 <= $n && count($files) < 1000 && substr($cd, $p, 4) === "PK\x01\x02") {
+            $h = unpack('vflags/vmethod/vtime/vdate/Vcrc/Vcsize/Vusize/vnl/vel/vcl', substr($cd, $p + 8, 28));
+            if ($p + 46 + $h['nl'] + $h['el'] + $h['cl'] > $n) break;
+            $name = substr($cd, $p + 46, $h['nl']);
+            $extra = substr($cd, $p + 46 + $h['nl'], $h['el']);
+            $usize = $h['usize'];
+            $csize = $h['csize'];
+            if ($usize === 0xFFFFFFFF || $csize === 0xFFFFFFFF) {
+                $q = 0;
+                while ($q + 4 <= strlen($extra)) {
+                    $hdr = unpack('vid/vlen', substr($extra, $q, 4));
+                    if ($hdr['id'] === 1) {
+                        $d = substr($extra, $q + 4, $hdr['len']);
+                        $o = 0;
+                        if ($usize === 0xFFFFFFFF && strlen($d) >= $o + 8) { $usize = unpack('P', substr($d, $o, 8))[1]; $o += 8; }
+                        if ($csize === 0xFFFFFFFF && strlen($d) >= $o + 8) { $csize = unpack('P', substr($d, $o, 8))[1]; }
+                        break;
+                    }
+                    $q += 4 + $hdr['len'];
+                }
+            }
+            if (!($h['flags'] & 0x800) && !fm_is_utf8($name) && function_exists('mb_convert_encoding')) {
+                $conv = @mb_convert_encoding($name, 'UTF-8', 'CP437');
+                if ($conv !== false && $conv !== '') $name = $conv;
+            }
+            $files[] = array(
+                'name' => $name,
+                'filesize' => (int)$usize,
+                'compressed_size' => (int)$csize,
+                'folder' => substr($name, -1) === '/'
+            );
+            $p += 46 + $h['nl'] + $h['el'] + $h['cl'];
+        }
+        return $files;
+    } catch (Throwable $e) {
+        error_log('TeraBox remote zip listing failed: ' . $e->getMessage());
+        return fm_zip_fail('exception: ' . $e->getMessage());
+    }
+}
+
+/**
  * Get info about zip archive
  * @param string $path
  * @return array|bool
  */
 function fm_get_zip_info($path, $ext)
 {
+    // Max remote archive size for the slow full-download fallback (bytes).
+    $maxArchive = 64 * 1024 * 1024;
     // ZIP/Phar libraries need a real seekable local file, not terabox://.
     // Download to a bounded temporary file and always remove it afterwards.
     $local = $path;
     $temp = false;
     if (strpos($path, 'terabox://') === 0) {
+        if ($ext === 'zip') {
+            // Fast path: read only the zip central directory with HTTP Range requests.
+            $remote = fm_get_remote_zip_info($path);
+            if ($remote !== false) return $remote;
+        }
         $size = @filesize($path);
-        if ($size === false || $size > 64 * 1024 * 1024) return false;
+        if ($size === false || $size > $maxArchive) return false;
         $temp = @tempnam(sys_get_temp_dir(), 'mega_arc_');
         if ($temp === false) return false;
         $src = @fopen($path, 'rb');
@@ -5361,10 +5463,10 @@ function fm_get_zip_info($path, $ext)
             @unlink($temp);
             return false;
         }
-        $copied = @stream_copy_to_stream($src, $dst, 64 * 1024 * 1024 + 1);
+        $copied = @stream_copy_to_stream($src, $dst, $maxArchive + 1);
         fclose($src);
         fclose($dst);
-        if ($copied === false || $copied > 64 * 1024 * 1024 || $copied !== $size) {
+        if ($copied === false || $copied > $maxArchive || $copied !== $size) {
             @unlink($temp);
             return false;
         }
@@ -12035,6 +12137,7 @@ function fm_render_readonly_preview($context) {
                         echo '</code>';
                     } else {
                         echo '<p>' . lng('Error while fetching archive info') . '</p>';
+                        if (!empty($GLOBALS['fm_zip_reason'])) echo '<p class="text-muted small">' . fm_enc($GLOBALS['fm_zip_reason']) . '</p>';
                     }
                 } elseif ($is_image) {
                     // Image content
