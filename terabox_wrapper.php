@@ -150,6 +150,44 @@ class TeraApi
         }
     }
 
+    /**
+     * Ranged reader for a remote file: returns callable($start, $len) => string|false.
+     * Fetches the download link once and then issues HTTP Range requests, so only the
+     * requested bytes are transferred (used to list a zip without downloading it).
+     */
+    public static function rangeReader($handle)
+    {
+        $n = isset(self::$nodes[$handle]) ? self::$nodes[$handle] : null;
+        if (!$n || (int)$n['t'] !== 0 || $n['fs'] === '') return false;
+        try {
+            $c = self::client();
+            $url = $c->getDownloadLink($handle, (int)$n['fs']);
+        } catch (Throwable $e) {
+            self::log('range link failed: ' . $e->getMessage());
+            self::$lastError = 'link: ' . $e->getMessage();
+            return false;
+        }
+        return function ($start, $len) use ($c, $url) {
+            if ($len <= 0) return '';
+            $buf = '';
+            $status = 0;
+            try {
+                $c->streamUrl($url, 'bytes=' . $start . '-' . ($start + $len - 1), false,
+                    function ($st, $h) use (&$status) { $status = $st; },
+                    function ($d) use (&$buf, $len) { $buf .= $d; return strlen($buf) < $len; });
+            } catch (Throwable $e) {
+                self::log('range read failed: ' . $e->getMessage());
+                self::$lastError = 'read: ' . $e->getMessage();
+                return false;
+            }
+            if ($status !== 206) { // server ignored Range: data would be wrong
+                self::$lastError = 'read: HTTP status ' . $status . ' instead of 206';
+                return false;
+            }
+            return substr($buf, 0, $len);
+        };
+    }
+
     public static function download($handle, $local)
     {
         $n = isset(self::$nodes[$handle]) ? self::$nodes[$handle] : null;
